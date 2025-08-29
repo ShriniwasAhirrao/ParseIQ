@@ -18,8 +18,8 @@ ParseIQ operates on a simple yet powerful 3-step pipeline:
 1.  **Extract:** The agent loads the input file and uses the `MetadataExtractor` to perform a deep technical analysis, generating a rich set of statistical and structural metadata.
 2.  **Enrich:** The extracted metadata is then sent to a large language model, which, guided by a sophisticated prompt, provides a qualitative analysis, identifies business-level issues, and generates strategic recommendations.
 3.  **Report:** The agent combines the technical metadata and the LLM's insights into a set of user-friendly reports, including individual CSV files for each discovered table and a consolidated Excel workbook with a comprehensive data quality assessment.
+![Solution](<./ParseIQ Diagram.jpg>)
 
-![Solution](./ParseIQ Diagram.jpg)
 
 
 ## Getting Started
