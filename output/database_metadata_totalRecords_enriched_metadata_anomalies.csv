@@ -1,0 +1,6 @@
+Column,Data_Type,Null_Count,Unique_Values,Min_Length,Max_Length,Pattern,Anomalies_Detected,Data_Quality_Issues
+users,INTEGER,0,1,,,Sequential,None,Good
+projects,INTEGER,0,1,,,Sequential,None,Good
+orders,INTEGER,0,1,,,Sequential,None,Good
+products,INTEGER,0,1,,,Sequential,None,Good
+notifications,INTEGER,0,1,,,Sequential,None,Good

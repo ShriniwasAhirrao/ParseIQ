@@ -1,0 +1,4 @@
+Column,Data_Type,Null_Count,Unique_Values,Min_Length,Max_Length,Pattern,Anomalies_Detected,Data_Quality_Issues
+value,INTEGER,0,2,,,Numeric,None,Good
+conversions,INTEGER,0,2,,,Numeric,None,Good
+name,VARCHAR,0,2,16,17,Alphanumeric,None,Good

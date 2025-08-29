@@ -1,0 +1,2 @@
+id,userId,type,title,message,data,channels,priority,isRead,createdAt,expiresAt
+5001,1001,order_update,Your order has been shipped!,Order #ORD-2025-001234 has been shipped and is on its way to you.,"{'orderId': 3001, 'trackingNumber': '1234567890', 'carrier': 'FedEx'}","{'email': {'sent': True, 'sentAt': '2025-07-21T10:15:00Z', 'opened': False}, 'push': {'sent': False, 'reason': 'user_disabled'}, 'sms': {'sent': True, 'sentAt': '2025-07-21T10:16:00Z', 'delivered': True}}",normal,False,2025-07-21T10:15:00Z,2025-08-21T10:15:00Z

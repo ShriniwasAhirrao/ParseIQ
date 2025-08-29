@@ -1,0 +1,525 @@
+{
+  "database": {
+    "version": "2.1.0",
+    "lastUpdated": "2025-07-21T10:30:00Z",
+    "tables": {
+      "users": [
+        {
+          "id": 1001,
+          "username": "johndoe",
+          "email": "john.doe@email.com",
+          "profile": {
+            "firstName": "John",
+            "lastName": "Doe",
+            "dateOfBirth": "1985-03-15",
+            "avatar": "https://example.com/avatars/john.jpg",
+            "bio": "Software engineer passionate about technology",
+            "socialMedia": {
+              "twitter": "@johndoe",
+              "linkedin": "linkedin.com/in/johndoe",
+              "github": "github.com/johndoe"
+            },
+            "preferences": {
+              "theme": "dark",
+              "language": "en-US",
+              "timezone": "America/New_York",
+              "notifications": {
+                "email": true,
+                "push": false,
+                "sms": true,
+                "frequency": "daily"
+              }
+            }
+          },
+          "address": {
+            "street": "123 Main Street",
+            "apartment": "4B",
+            "city": "New York",
+            "state": "NY",
+            "zipCode": "10001",
+            "country": "USA",
+            "coordinates": {
+              "latitude": 40.7128,
+              "longitude": -74.0060
+            }
+          },
+          "subscription": {
+            "plan": "premium",
+            "startDate": "2024-01-15",
+            "endDate": "2025-01-15",
+            "autoRenew": true,
+            "paymentMethod": {
+              "type": "credit_card",
+              "last4": "1234",
+              "expiryMonth": 12,
+              "expiryYear": 2026
+            }
+          },
+          "createdAt": "2023-05-20T14:30:00Z",
+          "lastLogin": "2025-07-21T09:15:00Z",
+          "status": "active"
+        },
+        {
+          "id": 1002,
+          "username": "janesmithdev",
+          "email": "jane.smith@techcorp.com",
+          "profile": {
+            "firstName": "Jane",
+            "lastName": "Smith",
+            "dateOfBirth": "1990-08-22",
+            "avatar": "https://example.com/avatars/jane.jpg",
+            "bio": "Full-stack developer and UI/UX enthusiast",
+            "socialMedia": {
+              "twitter": "@janesmithdev",
+              "dribbble": "dribbble.com/janesmith",
+              "github": "github.com/janesmithdev"
+            },
+            "preferences": {
+              "theme": "light",
+              "language": "en-US",
+              "timezone": "America/Los_Angeles",
+              "notifications": {
+                "email": true,
+                "push": true,
+                "sms": false,
+                "frequency": "weekly"
+              }
+            }
+          },
+          "address": {
+            "street": "456 Tech Boulevard",
+            "city": "San Francisco",
+            "state": "CA",
+            "zipCode": "94105",
+            "country": "USA",
+            "coordinates": {
+              "latitude": 37.7749,
+              "longitude": -122.4194
+            }
+          },
+          "subscription": {
+            "plan": "basic",
+            "startDate": "2024-03-10",
+            "endDate": "2025-03-10",
+            "autoRenew": false,
+            "paymentMethod": {
+              "type": "paypal",
+              "email": "jane.payments@email.com"
+            }
+          },
+          "createdAt": "2024-03-10T10:00:00Z",
+          "lastLogin": "2025-07-20T16:45:00Z",
+          "status": "active"
+        }
+      ],
+      "projects": [
+        {
+          "id": 2001,
+          "name": "E-commerce Platform Redesign",
+          "description": "Complete overhaul of the existing e-commerce platform with modern UI/UX",
+          "status": "in_progress",
+          "priority": "high",
+          "budget": {
+            "allocated": 150000,
+            "spent": 87500,
+            "currency": "USD"
+          },
+          "timeline": {
+            "startDate": "2025-01-15",
+            "endDate": "2025-09-30",
+            "milestones": [
+              {
+                "id": "m1",
+                "name": "Requirements Analysis",
+                "dueDate": "2025-02-15",
+                "status": "completed",
+                "deliverables": ["requirements_doc.pdf", "user_stories.json"]
+              },
+              {
+                "id": "m2",
+                "name": "UI/UX Design",
+                "dueDate": "2025-04-30",
+                "status": "in_progress",
+                "deliverables": ["wireframes.fig", "mockups.fig", "prototype.html"]
+              },
+              {
+                "id": "m3",
+                "name": "Backend Development",
+                "dueDate": "2025-07-31",
+                "status": "not_started",
+                "deliverables": ["api_documentation.md", "database_schema.sql"]
+              }
+            ]
+          },
+          "team": {
+            "projectManager": {
+              "userId": 1001,
+              "role": "Project Manager",
+              "allocation": 100,
+              "hourlyRate": 95
+            },
+            "members": [
+              {
+                "userId": 1002,
+                "role": "Lead Developer",
+                "allocation": 80,
+                "hourlyRate": 85,
+                "skills": ["React", "Node.js", "MongoDB", "AWS"]
+              },
+              {
+                "userId": 1003,
+                "role": "UI/UX Designer",
+                "allocation": 60,
+                "hourlyRate": 70,
+                "skills": ["Figma", "Adobe XD", "User Research", "Prototyping"]
+              }
+            ]
+          },
+          "technologies": {
+            "frontend": ["React", "TypeScript", "Tailwind CSS", "Next.js"],
+            "backend": ["Node.js", "Express", "MongoDB", "Redis"],
+            "infrastructure": ["AWS", "Docker", "Kubernetes", "CloudFront"],
+            "tools": ["Figma", "Jira", "Slack", "GitHub"]
+          },
+          "risks": [
+            {
+              "id": "r1",
+              "description": "Third-party API integration delays",
+              "probability": "medium",
+              "impact": "high",
+              "mitigation": "Identify backup API providers"
+            },
+            {
+              "id": "r2",
+              "description": "Resource allocation conflicts",
+              "probability": "low",
+              "impact": "medium",
+              "mitigation": "Cross-train team members"
+            }
+          ],
+          "createdAt": "2025-01-10T09:00:00Z",
+          "updatedAt": "2025-07-21T08:30:00Z"
+        }
+      ],
+      "orders": [
+        {
+          "id": 3001,
+          "orderNumber": "ORD-2025-001234",
+          "customerId": 1001,
+          "orderDate": "2025-07-20T15:30:00Z",
+          "status": "processing",
+          "paymentStatus": "paid",
+          "items": [
+            {
+              "productId": 4001,
+              "productName": "Wireless Bluetooth Headphones",
+              "category": "Electronics",
+              "sku": "WBH-001",
+              "quantity": 2,
+              "unitPrice": 89.99,
+              "discount": {
+                "type": "percentage",
+                "value": 10,
+                "reason": "loyalty_discount"
+              },
+              "finalPrice": 80.99,
+              "specifications": {
+                "color": "Black",
+                "size": "Standard",
+                "warranty": "2 years",
+                "features": ["Noise Cancellation", "30-hour battery", "Quick charge"]
+              }
+            },
+            {
+              "productId": 4002,
+              "productName": "USB-C Charging Cable",
+              "category": "Accessories",
+              "sku": "USB-C-002",
+              "quantity": 1,
+              "unitPrice": 19.99,
+              "discount": null,
+              "finalPrice": 19.99,
+              "specifications": {
+                "length": "2 meters",
+                "color": "White",
+                "features": ["Fast charging", "Data transfer", "Braided cable"]
+              }
+            }
+          ],
+          "pricing": {
+            "subtotal": 181.97,
+            "tax": {
+              "rate": 8.5,
+              "amount": 15.47
+            },
+            "shipping": {
+              "method": "standard",
+              "cost": 5.99,
+              "estimatedDays": 5
+            },
+            "discounts": {
+              "loyaltyDiscount": 18.00,
+              "promoCode": null
+            },
+            "total": 185.43
+          },
+          "shipping": {
+            "address": {
+              "name": "John Doe",
+              "street": "123 Main Street",
+              "apartment": "4B",
+              "city": "New York",
+              "state": "NY",
+              "zipCode": "10001",
+              "country": "USA"
+            },
+            "carrier": "FedEx",
+            "trackingNumber": "1234567890",
+            "estimatedDelivery": "2025-07-25T18:00:00Z"
+          },
+          "payment": {
+            "method": "credit_card",
+            "cardLast4": "1234",
+            "transactionId": "txn_abc123def456",
+            "processedAt": "2025-07-20T15:32:15Z"
+          }
+        }
+      ],
+      "products": [
+        {
+          "id": 4001,
+          "name": "Wireless Bluetooth Headphones",
+          "description": "Premium wireless headphones with active noise cancellation",
+          "category": {
+            "primary": "Electronics",
+            "secondary": "Audio",
+            "tertiary": "Headphones"
+          },
+          "brand": "TechSound",
+          "sku": "WBH-001",
+          "pricing": {
+            "basePrice": 89.99,
+            "currency": "USD",
+            "discounts": [
+              {
+                "type": "bulk",
+                "minQuantity": 5,
+                "percentage": 15
+              },
+              {
+                "type": "seasonal",
+                "startDate": "2025-07-01",
+                "endDate": "2025-07-31",
+                "percentage": 10
+              }
+            ]
+          },
+          "inventory": {
+            "stock": 150,
+            "reserved": 25,
+            "available": 125,
+            "locations": [
+              {
+                "warehouse": "NY-001",
+                "quantity": 75
+              },
+              {
+                "warehouse": "CA-002",
+                "quantity": 75
+              }
+            ]
+          },
+          "specifications": {
+            "dimensions": {
+              "length": 20.5,
+              "width": 18.0,
+              "height": 8.5,
+              "unit": "cm"
+            },
+            "weight": {
+              "value": 280,
+              "unit": "grams"
+            },
+            "technical": {
+              "bluetoothVersion": "5.2",
+              "batteryLife": "30 hours",
+              "chargingTime": "2 hours",
+              "frequency": "20Hz - 20kHz",
+              "impedance": "32 ohms"
+            },
+            "features": [
+              "Active Noise Cancellation",
+              "Quick Charge (15min = 3hrs)",
+              "Voice Assistant Compatible",
+              "Foldable Design",
+              "Touch Controls"
+            ]
+          },
+          "media": {
+            "images": [
+              {
+                "url": "https://example.com/products/wbh-001-main.jpg",
+                "alt": "Wireless Bluetooth Headphones - Main View",
+                "type": "main"
+              },
+              {
+                "url": "https://example.com/products/wbh-001-side.jpg",
+                "alt": "Wireless Bluetooth Headphones - Side View",
+                "type": "gallery"
+              }
+            ],
+            "videos": [
+              {
+                "url": "https://example.com/products/wbh-001-demo.mp4",
+                "title": "Product Demo Video",
+                "duration": 120
+              }
+            ]
+          },
+          "reviews": {
+            "average": 4.5,
+            "totalCount": 247,
+            "distribution": {
+              "5": 150,
+              "4": 72,
+              "3": 15,
+              "2": 8,
+              "1": 2
+            }
+          },
+          "createdAt": "2024-12-15T10:00:00Z",
+          "updatedAt": "2025-07-20T14:20:00Z",
+          "status": "active"
+        }
+      ],
+      "analytics": {
+        "website": {
+          "dailyStats": [
+            {
+              "date": "2025-07-21",
+              "visitors": {
+                "unique": 15420,
+                "returning": 8930,
+                "new": 6490
+              },
+              "pageViews": 45670,
+              "bounceRate": 0.35,
+              "averageSessionDuration": 420,
+              "conversionRate": 0.024,
+              "topPages": [
+                {
+                  "url": "/products/wireless-headphones",
+                  "views": 3450,
+                  "uniqueViews": 2890
+                },
+                {
+                  "url": "/",
+                  "views": 8920,
+                  "uniqueViews": 7650
+                }
+              ],
+              "trafficSources": {
+                "organic": 0.45,
+                "direct": 0.25,
+                "social": 0.15,
+                "paid": 0.10,
+                "referral": 0.05
+              },
+              "devices": {
+                "mobile": 0.60,
+                "desktop": 0.35,
+                "tablet": 0.05
+              },
+              "geography": [
+                {
+                  "country": "United States",
+                  "visitors": 8934,
+                  "percentage": 0.58
+                },
+                {
+                  "country": "Canada",
+                  "visitors": 1235,
+                  "percentage": 0.08
+                },
+                {
+                  "country": "United Kingdom",
+                  "visitors": 1098,
+                  "percentage": 0.07
+                }
+              ]
+            }
+          ],
+          "goals": [
+            {
+              "name": "Newsletter Signup",
+              "conversions": 234,
+              "value": 2340
+            },
+            {
+              "name": "Product Purchase",
+              "conversions": 89,
+              "value": 15670
+            }
+          ]
+        }
+      },
+      "notifications": [
+        {
+          "id": 5001,
+          "userId": 1001,
+          "type": "order_update",
+          "title": "Your order has been shipped!",
+          "message": "Order #ORD-2025-001234 has been shipped and is on its way to you.",
+          "data": {
+            "orderId": 3001,
+            "trackingNumber": "1234567890",
+            "carrier": "FedEx"
+          },
+          "channels": {
+            "email": {
+              "sent": true,
+              "sentAt": "2025-07-21T10:15:00Z",
+              "opened": false
+            },
+            "push": {
+              "sent": false,
+              "reason": "user_disabled"
+            },
+            "sms": {
+              "sent": true,
+              "sentAt": "2025-07-21T10:16:00Z",
+              "delivered": true
+            }
+          },
+          "priority": "normal",
+          "isRead": false,
+          "createdAt": "2025-07-21T10:15:00Z",
+          "expiresAt": "2025-08-21T10:15:00Z"
+        }
+      ]
+    },
+    "metadata": {
+      "totalRecords": {
+        "users": 2,
+        "projects": 1,
+        "orders": 1,
+        "products": 1,
+        "notifications": 1
+      },
+      "relationships": {
+        "user_orders": "users.id -> orders.customerId",
+        "project_users": "users.id -> projects.team.members.userId",
+        "order_products": "orders.items.productId -> products.id",
+        "user_notifications": "users.id -> notifications.userId"
+      },
+      "indexes": [
+        "users.email",
+        "users.username",
+        "orders.orderNumber",
+        "orders.customerId",
+        "products.sku",
+        "notifications.userId"
+      ]
+    }
+  }
+}

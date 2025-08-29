@@ -1,0 +1,11 @@
+Column,Data_Type,Null_Count,Unique_Values,Min_Length,Max_Length,Pattern,Anomalies_Detected,Data_Quality_Issues
+shipping,OBJECT,0,1,,,Fixed values,None,Good
+orderNumber,VARCHAR,0,1,15,15,Alphanumeric,None,Good
+pricing,OBJECT,0,1,,,Fixed values,None,Good
+paymentStatus,VARCHAR,0,1,4,4,Alphanumeric,None,Good
+payment,OBJECT,0,1,,,Fixed values,None,Good
+orderDate,VARCHAR,0,1,20,20,Free text,None,Good
+items,ARRAY,0,1,,,Fixed values,None,Good
+id,INTEGER,0,1,,,Sequential,None,Good
+customerId,INTEGER,0,1,,,Sequential,None,Good
+status,VARCHAR,0,1,10,10,Alphanumeric,None,Good

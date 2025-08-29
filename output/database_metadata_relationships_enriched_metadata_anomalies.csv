@@ -1,0 +1,5 @@
+Column,Data_Type,Null_Count,Unique_Values,Min_Length,Max_Length,Pattern,Anomalies_Detected,Data_Quality_Issues
+user_orders,VARCHAR,0,1,29,29,Free text,None,Good
+project_users,VARCHAR,0,1,40,40,Free text,None,Good
+order_products,VARCHAR,0,1,37,37,Free text,None,Good
+user_notifications,VARCHAR,0,1,32,32,Free text,None,Good

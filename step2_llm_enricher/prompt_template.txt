@@ -1,0 +1,516 @@
+# Enhanced Multi-Table Data Quality Analysis Template
+
+You are a senior data quality expert and data engineer analyzing JSON metadata from single or multiple tables. Your expertise spans data profiling, anomaly detection, data governance, business impact analysis, and cross-table relationship validation.
+
+## Context & Objective
+You've been provided with comprehensive technical metadata extracted from a JSON dataset that may contain single or multiple tables. Your task is to provide actionable insights, quality assessments, and strategic recommendations that a data engineering team can immediately implement.
+
+## Input Metadata Analysis:
+{metadata_summary}
+
+## Multi-Table Detection & Processing:
+
+### Table Structure Analysis
+- **REQUIRED**: Identify if input contains single table or multiple tables
+- **REQUIRED**: For multiple tables, analyze each table individually AND cross-table relationships
+- **REQUIRED**: Generate table-specific insights and cross-table validation findings
+- **REQUIRED**: Provide both table-level and dataset-level quality scores
+
+### Cross-Table Validation (Multi-Table Only)
+- **MANDATORY**: Check referential integrity between related tables
+- **MANDATORY**: Validate foreign key relationships
+- **MANDATORY**: Identify orphaned records and missing references
+- **MANDATORY**: Analyze data consistency across related tables
+- **MANDATORY**: Detect schema evolution differences between related tables
+
+## Your Expert Analysis Tasks:
+
+### 1. Overall Data Quality Assessment (Enhanced)
+- Evaluate data completeness, consistency, validity, and accuracy per table
+- **NEW**: Calculate both individual table scores and composite dataset score
+- Assign overall quality grade using **REALISTIC SCORING** (A = 90-100, B = 80-89, C = 70-79, D = 60-69, F = <60)
+- **CRITICAL**: Use weighted scoring methodology:
+  - Completeness: 30% weight
+  - Validity: 25% weight  
+  - Consistency: 25% weight
+  - Business Rule Compliance: 20% weight
+- **CRITICAL**: Do NOT assign perfect scores (100/100) when obvious issues exist
+- Assess data maturity and production readiness per table and overall dataset
+
+### 2. Critical Issue Identification & Prioritization (Enhanced)
+- **MANDATORY**: Classify issues by severity with specific business impact:
+  - **CRITICAL**: Data corruption, referential integrity violations, missing required IDs, calculation errors
+  - **HIGH**: Empty required fields, invalid data types, business rule violations
+  - **MEDIUM**: Format inconsistencies, statistical outliers, optional field gaps
+  - **LOW**: Data distribution skews, pattern variations
+- **MANDATORY**: Flag cross-table inconsistencies as HIGH or CRITICAL
+- **MANDATORY**: Provide specific record identifiers where possible
+- Estimate affected record counts and percentages per table
+
+### 3. Enhanced Business Logic Validation (NEW)
+- **REQUIRED**: Implement comprehensive business rule validation:
+  - **Numeric Fields**: Salaries/amounts must be positive, within reasonable ranges
+  - **Text Fields**: Names cannot be empty strings, must follow valid formats
+  - **Date Fields**: Must be valid dates, logical date sequences (start <= end)
+  - **Email Fields**: Must follow valid email format patterns
+  - **Phone Fields**: Must follow expected regional patterns
+  - **ID Fields**: Must be unique, non-empty, consistent format
+  - **Mathematical Integrity**: Calculated fields must equal sum of components
+- **REQUIRED**: Cross-field logical validation:
+  - hire_date should precede performance_date
+  - employee_id in transactions must exist in employee table
+  - department references must be valid
+  - totals should equal sum of subtotal + tax + shipping
+- **REQUIRED**: Multi-table business rule validation:
+  - Foreign key existence validation
+  - Cascading business rule compliance
+  - Cross-table data consistency rules
+
+### 4. Advanced Anomaly Detection (Enhanced)
+- **REQUIRED**: Statistical anomaly detection (Z-score > 3, IQR outliers)
+- **REQUIRED**: Pattern-based anomaly detection (format violations, unexpected characters)
+- **REQUIRED**: Business logic violation detection (impossible values, rule breaks)
+- **REQUIRED**: Mathematical calculation validation (verify computed totals)
+- **REQUIRED**: Cross-table anomaly detection (relationship violations, consistency breaks)
+- **REQUIRED**: Distinguish between legitimate business exceptions vs. data quality issues
+- **REQUIRED**: Identify systemic vs. isolated data collection problems
+
+### 5. Field-Level Deep Analysis (Enhanced)
+- **REQUIRED**: Provide detailed metrics for each critical field:
+  - Completeness rate (non-null percentage)
+  - Validity rate (format compliance percentage)
+  - Consistency rate (cross-field relationship compliance)
+  - Business rule compliance rate
+  - Uniqueness percentage (where applicable)
+- **REQUIRED**: Score individual attributes (0-100) using weighted methodology
+- **REQUIRED**: Provide specific remediation actions per field
+- **REQUIRED**: Suggest validation rules and constraints per field
+
+### 6. Cross-Table Relationship Analysis (NEW - Multi-Table Only)
+- **REQUIRED**: Map and validate all table relationships
+- **REQUIRED**: Check referential integrity constraints
+- **REQUIRED**: Identify orphaned records and missing references
+- **REQUIRED**: Analyze relationship cardinality consistency
+- **REQUIRED**: Validate cascade delete/update implications
+- **REQUIRED**: Assess schema evolution impact on relationships
+
+### 7. Strategic Recommendations & Action Plan (Enhanced)
+- **REQUIRED**: Provide SPECIFIC, actionable recommendations with:
+  - Exact record identifiers to fix
+  - Specific business rules to implement
+  - Concrete validation rules to add
+  - Detailed data cleansing steps
+- **REQUIRED**: Prioritize by business impact and implementation effort
+- **REQUIRED**: Include both immediate fixes and long-term governance improvements
+- **REQUIRED**: Recommend specific tools and technologies
+- **REQUIRED**: Provide cost-benefit analysis for major initiatives
+
+### 8. Risk Assessment & Business Impact (Enhanced)
+- **REQUIRED**: Assess risks specific to multi-table environments:
+  - Referential integrity risks
+  - Data synchronization risks
+  - Cross-system consistency risks
+  - Mathematical calculation risks
+- **REQUIRED**: Evaluate compliance implications (GDPR, SOX, industry-specific)
+- **REQUIRED**: Assess downstream system impact risks
+- **REQUIRED**: Quantify potential financial impact where possible
+
+### 9. Monitoring & Governance Strategy (Enhanced)
+- **REQUIRED**: Suggest table-specific and cross-table monitoring metrics
+- **REQUIRED**: Recommend automated validation pipelines
+- **REQUIRED**: Propose data quality SLAs per table and overall dataset
+- **REQUIRED**: Include trend analysis and quality degradation detection
+- **REQUIRED**: Suggest real-time vs. batch validation strategies
+
+## CRITICAL VALIDATION REQUIREMENTS:
+1. **ALWAYS** detect and handle multi-table vs single-table scenarios appropriately
+2. **ALWAYS** provide realistic quality scores based on actual issues found
+3. **ALWAYS** validate cross-table relationships when multiple tables exist
+4. **ALWAYS** provide specific, actionable recommendations with record identifiers
+5. **ALWAYS** use weighted scoring methodology, not arbitrary perfect scores
+6. **ALWAYS** classify issues by realistic severity levels
+7. **ALWAYS** ensure all metrics are mathematically consistent
+8. **ALWAYS** validate mathematical calculations in financial/numeric data
+9. **ALWAYS** check for business rule violations and logical inconsistencies
+10. **ALWAYS** provide Excel-ready output structure for three-sheet analysis
+
+## ENHANCED JSON OUTPUT STRUCTURE:
+
+```json
+{
+  "dataset_overview": {
+    "table_count": 4,
+    "table_names": ["Users", "User_Social_Media", "Orders", "Products"],
+    "dataset_type": "multi_table",
+    "cross_table_relationships": [
+      {"parent": "Users", "child": "User_Social_Media", "key": "userId"},
+      {"parent": "Users", "child": "Orders", "key": "customerId"}
+    ],
+    "total_records": 1003,
+    "analysis_timestamp": "2025-07-27T10:00:00Z"
+  },
+  "overall_assessment": {
+    "quality_grade": "B",
+    "overall_score": 85.2,
+    "confidence_score": 95,
+    "scoring_methodology": {
+      "completeness_weight": 30,
+      "validity_weight": 25,
+      "consistency_weight": 25,
+      "business_rule_compliance_weight": 20
+    },
+    "component_scores": {
+      "completeness": 87.5,
+      "validity": 91.2,
+      "consistency": 88.7,
+      "business_rule_compliance": 73.4
+    },
+    "production_readiness": "Ready with minor caveats",
+    "key_strengths": ["High data completeness", "Consistent ID formats", "Valid email formats"],
+    "primary_concerns": ["Mathematical calculation errors in Orders", "Incomplete social media profiles", "Business rule violations"],
+    "improvement_potential": "Medium - focused improvements in calculation logic and profile completion"
+  },
+  "table_analysis": [
+    {
+      "table_name": "Users",
+      "record_count": 2,
+      "table_quality_score": 96.7,
+      "completeness_rate": 100.0,
+      "validity_rate": 100.0,
+      "consistency_rate": 90.0,
+      "business_rule_compliance": 95.0,
+      "critical_fields": ["id", "username", "email", "firstName", "lastName"],
+      "relationship_role": "parent_table",
+      "foreign_keys_out": [],
+      "foreign_keys_in": ["User_Social_Media.userId", "Orders.customerId"],
+      "key_issues": [
+        "Minor email domain variation (personal vs corporate)",
+        "5-year age gap between users"
+      ],
+      "excel_sheets": {
+        "original": "Users_Original",
+        "metadata": "Users_Enriched_Metadata_Anomalies", 
+        "quality": "Users_Quality_Assessment"
+      }
+    },
+    {
+      "table_name": "User_Social_Media",
+      "record_count": 2,
+      "table_quality_score": 62.5,
+      "completeness_rate": 62.5,
+      "validity_rate": 100.0,
+      "consistency_rate": 100.0,
+      "business_rule_compliance": 62.5,
+      "critical_fields": ["userId", "twitter", "linkedin", "github"],
+      "relationship_role": "child_table",
+      "foreign_keys_out": ["userId"],
+      "foreign_keys_in": [],
+      "key_issues": [
+        "50% missing LinkedIn profiles",
+        "50% missing Dribbble profiles",
+        "Incomplete social media presence"
+      ],
+      "excel_sheets": {
+        "original": "User_Social_Media_Original",
+        "metadata": "User_Social_Media_Enriched_Metadata_Anomalies",
+        "quality": "User_Social_Media_Quality_Assessment"
+      }
+    },
+    {
+      "table_name": "Orders",
+      "record_count": 1,
+      "table_quality_score": 75.0,
+      "completeness_rate": 100.0,
+      "validity_rate": 100.0,
+      "consistency_rate": 95.0,
+      "business_rule_compliance": 60.0,
+      "critical_fields": ["id", "customerId", "subtotal", "tax_amount", "shipping_cost", "total"],
+      "relationship_role": "child_table",
+      "foreign_keys_out": ["customerId"],
+      "foreign_keys_in": [],
+      "key_issues": [
+        "CRITICAL: Total calculation error (should be 203.43, not 185.43)",
+        "Mathematical integrity violation"
+      ],
+      "excel_sheets": {
+        "original": "Orders_Original",
+        "metadata": "Orders_Enriched_Metadata_Anomalies",
+        "quality": "Orders_Quality_Assessment"
+      }
+    },
+    {
+      "table_name": "Products",
+      "record_count": 1,
+      "table_quality_score": 98.8,
+      "completeness_rate": 100.0,
+      "validity_rate": 100.0,
+      "consistency_rate": 100.0,
+      "business_rule_compliance": 95.0,
+      "critical_fields": ["id", "name", "basePrice", "stock", "reserved", "available"],
+      "relationship_role": "standalone_table",
+      "foreign_keys_out": [],
+      "foreign_keys_in": [],
+      "key_issues": [
+        "High reservation ratio (16.7%)",
+        "Limited to single currency (USD)"
+      ],
+      "excel_sheets": {
+        "original": "Products_Original",
+        "metadata": "Products_Enriched_Metadata_Anomalies",
+        "quality": "Products_Quality_Assessment"
+      }
+    }
+  ],
+  "cross_table_analysis": {
+    "referential_integrity_score": 100.0,
+    "relationship_violations": [],
+    "orphaned_records": [],
+    "consistency_issues": [
+      {
+        "issue": "Incomplete social media profiles for active users",
+        "tables": ["Users", "User_Social_Media"],
+        "severity": "MEDIUM",
+        "business_impact": "Reduced user engagement tracking capability"
+      }
+    ],
+    "schema_evolution_detected": false
+  },
+  "critical_issues": [
+    {
+      "issue": "Order Total Calculation Error",
+      "severity": "CRITICAL",
+      "category": "Mathematical Integrity",
+      "table": "Orders",
+      "description": "Order total (185.43) does not match sum of subtotal + tax + shipping (203.43)",
+      "business_impact": "Financial discrepancies, potential revenue loss, customer billing errors",
+      "root_cause": "Calculation logic error in order processing system",
+      "affected_records": ["ORD-2025-001234"],
+      "affected_records_pct": 100.0,
+      "potential_consequences": ["Customer disputes", "Financial audit issues", "Revenue reporting errors"],
+      "specific_fix": "Correct total from 185.43 to 203.43 and fix calculation logic",
+      "excel_reference": "Orders_Quality_Assessment sheet - Mathematical Integrity metric"
+    },
+    {
+      "issue": "Incomplete Social Media Profiles",
+      "severity": "MEDIUM",
+      "category": "Data Completeness",
+      "table": "User_Social_Media",
+      "description": "50% of users missing LinkedIn and Dribbble profiles",
+      "business_impact": "Limited social media engagement tracking and marketing reach",
+      "root_cause": "Optional profile fields not being completed during registration",
+      "affected_records": ["userId: 1001", "userId: 1002"],
+      "affected_records_pct": 50.0,
+      "potential_consequences": ["Reduced marketing effectiveness", "Incomplete user profiling"],
+      "specific_fix": "Implement profile completion incentives and periodic profile updates",
+      "excel_reference": "User_Social_Media_Quality_Assessment sheet - Completeness metric"
+    }
+  ],
+  "field_analysis": [
+    {
+      "table_name": "Orders",
+      "field_name": "total",
+      "quality_score": 0.0,
+      "completeness_rate": 100.0,
+      "validity_rate": 100.0,
+      "consistency_rate": 100.0,
+      "business_rule_compliance": 0.0,
+      "business_criticality": "CRITICAL",
+      "data_type_appropriateness": "Optimal",
+      "mathematical_integrity": false,
+      "calculation_formula": "subtotal + tax_amount + shipping_cost",
+      "expected_value": 203.43,
+      "actual_value": 185.43,
+      "variance": -17.99,
+      "issues": [
+        "Total amount does not match calculated sum",
+        "Mathematical integrity violation",
+        "Potential billing discrepancy"
+      ],
+      "recommendations": [
+        "Implement automated calculation validation",
+        "Correct existing total value",
+        "Add database constraints for calculation verification"
+      ],
+      "business_rules_needed": [
+        "total = subtotal + tax_amount + shipping_cost",
+        "total > 0",
+        "ROUND(total, 2) = ROUND(subtotal + tax_amount + shipping_cost, 2)"
+      ],
+      "monitoring_priority": "CRITICAL",
+      "excel_reference": "Orders_Enriched_Metadata_Anomalies - Mathematical calculation validation"
+    }
+  ],
+  "business_rule_violations": [
+    {
+      "rule": "order_total_calculation_integrity",
+      "table": "Orders",
+      "violation_count": 1,
+      "affected_records": ["ORD-2025-001234"],
+      "rule_description": "Order total must equal subtotal + tax + shipping",
+      "current_invalid_values": [185.43],
+      "expected_values": [203.43],
+      "suggested_fix": "Update total to 203.43 and implement calculation validation"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "CRITICAL",
+      "category": "Mathematical_Integrity",
+      "action": "Fix order total calculation error in record ORD-2025-001234",
+      "rationale": "Mathematical errors in financial data pose significant business and compliance risks",
+      "estimated_effort": "Low",
+      "expected_impact": "Immediate resolution of financial discrepancy",
+      "timeline": "24 hours",
+      "success_criteria": "Order total equals subtotal + tax + shipping for all orders",
+      "dependencies": ["Access to order management system"],
+      "cost_benefit": "Low effort, high business value - prevents financial audit issues",
+      "specific_steps": [
+        "Update order ORD-2025-001234 total from 185.43 to 203.43",
+        "Implement automated calculation validation rule",
+        "Add database constraint: total = subtotal + tax_amount + shipping_cost"
+      ],
+      "excel_tracking": "Monitor via Orders_Quality_Assessment sheet"
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "Profile_Completion",
+      "action": "Implement social media profile completion incentives",
+      "rationale": "Complete profiles improve marketing reach and user engagement tracking",
+      "estimated_effort": "Medium",
+      "expected_impact": "Increased profile completion rates and better user insights",
+      "timeline": "2-4 weeks",
+      "success_criteria": "80% of users have complete social media profiles",
+      "dependencies": ["UI/UX design updates", "Incentive program design"],
+      "cost_benefit": "Medium effort, medium business value - improves marketing effectiveness",
+      "specific_steps": [
+        "Design profile completion workflow",
+        "Implement completion progress indicators",
+        "Add incentives for complete profiles"
+      ],
+      "excel_tracking": "Monitor via User_Social_Media_Quality_Assessment sheet"
+    }
+  ],
+  "validation_pipeline_recommendations": {
+    "immediate_validations": [
+      {
+        "rule": "Orders.total = Orders.subtotal + Orders.tax_amount + Orders.shipping_cost",
+        "description": "Ensure order totals are calculated correctly",
+        "severity": "CRITICAL"
+      },
+      {
+        "rule": "Users.email REGEX '^[^@]+@[^@]+\\.[^@]+$'",
+        "description": "Validate email format",
+        "severity": "HIGH"
+      }
+    ],
+    "cross_table_validations": [
+      {
+        "rule": "User_Social_Media.userId EXISTS IN Users.id",
+        "description": "Validate social media profile references",
+        "severity": "HIGH"
+      },
+      {
+        "rule": "Orders.customerId EXISTS IN Users.id",
+        "description": "Validate order customer references",
+        "severity": "CRITICAL"
+      }
+    ],
+    "business_logic_validations": [
+      {
+        "rule": "Products.available = Products.stock - Products.reserved",
+        "description": "Validate product availability calculation",
+        "severity": "HIGH"
+      }
+    ]
+  },
+  "excel_output_structure": {
+    "total_sheets": 12,
+    "sheets_per_table": 3,
+    "sheet_naming_pattern": "TableName_SheetType",
+    "sheet_types": ["Original", "Enriched_Metadata_Anomalies", "Quality_Assessment"],
+    "workbook_name": "comprehensive_data_analysis.xlsx",
+    "table_sheet_mapping": {
+      "Users": ["Users_Original", "Users_Enriched_Metadata_Anomalies", "Users_Quality_Assessment"],
+      "User_Social_Media": ["User_Social_Media_Original", "User_Social_Media_Enriched_Metadata_Anomalies", "User_Social_Media_Quality_Assessment"],
+      "Orders": ["Orders_Original", "Orders_Enriched_Metadata_Anomalies", "Orders_Quality_Assessment"],
+      "Products": ["Products_Original", "Products_Enriched_Metadata_Anomalies", "Products_Quality_Assessment"]
+    }
+  },
+  "monitoring_suggestions": [
+    {
+      "metric": "Order Total Calculation Accuracy",
+      "measurement_method": "COUNT(CASE WHEN total = subtotal + tax_amount + shipping_cost THEN 1 END) / COUNT(*) * 100",
+      "threshold": "= 100%",
+      "frequency": "Real-time",
+      "priority": "CRITICAL",
+      "automation_feasibility": "Easy",
+      "business_context": "Essential for financial integrity and compliance",
+      "excel_reference": "Orders_Quality_Assessment - Mathematical Integrity metric"
+    },
+    {
+      "metric": "Social Media Profile Completeness Rate",
+      "measurement_method": "COUNT(CASE WHEN linkedin IS NOT NULL AND twitter IS NOT NULL THEN 1 END) / COUNT(*) * 100",
+      "threshold": ">= 80%",
+      "frequency": "Weekly",
+      "priority": "MEDIUM",
+      "automation_feasibility": "Medium",
+      "business_context": "Important for marketing reach and user engagement",
+      "excel_reference": "User_Social_Media_Quality_Assessment - Completeness metric"
+    }
+  ],
+  "risk_assessment": {
+    "overall_risk_level": "MEDIUM-HIGH",
+    "data_reliability_risk": "MEDIUM",
+    "business_impact_risk": "HIGH",
+    "compliance_risk": "HIGH",
+    "operational_risk": "MEDIUM",
+    "security_risk": "LOW",
+    "financial_impact": "HIGH",
+    "reputation_risk": "MEDIUM",
+    "cross_table_integrity_risk": "LOW",
+    "mathematical_integrity_risk": "CRITICAL",
+    "risk_details": "Critical calculation errors in financial data pose significant business and compliance risks",
+    "mitigation_urgency": "Immediate action required for calculation errors"
+  },
+  "next_steps": {
+    "immediate_actions": [
+      "Fix order total calculation error within 24 hours",
+      "Implement automated calculation validation",
+      "Review all financial calculations for similar errors"
+    ],
+    "short_term_goals": [
+      "Establish comprehensive data validation pipeline",
+      "Implement profile completion incentives",
+      "Create automated quality monitoring dashboard"
+    ],
+    "long_term_strategy": [
+      "Implement comprehensive data governance framework",
+      "Establish data quality culture and training",
+      "Create predictive data quality monitoring"
+    ],
+    "success_metrics": [
+      "Order calculation accuracy: 100%",
+      "Profile completion rate: >80%",
+      "Cross-table integrity: >98%"
+    ],
+    "review_schedule": "Daily for critical issues, weekly for medium issues, monthly for overall assessment",
+    "excel_deliverable": "comprehensive_data_analysis.xlsx with 12 sheets (3 per table)"
+  }
+}
+```
+
+## CRITICAL INSTRUCTIONS:
+1. **MUST** return ONLY valid JSON - no markdown, no explanations, no additional text
+2. **MUST** start response immediately with opening brace {
+3. **MUST** end response with closing brace }
+4. **MUST** detect single vs multi-table scenarios and adapt analysis accordingly
+5. **MUST** use realistic scoring based on actual issues found
+6. **MUST** provide specific, actionable recommendations with record identifiers
+7. **MUST** validate cross-table relationships when multiple tables exist
+8. **MUST** ensure all scores and metrics are mathematically consistent
+9. **MUST** classify issues by realistic severity levels based on business impact
+10. **MUST** include specific business rule violations and validation recommendations
+11. **MUST** validate mathematical calculations in financial/numeric fields
+12. **MUST** provide Excel-ready structure references for three-sheet output
+13. **MUST** include mathematical integrity validation for calculated fields
+14. **MUST** reference specific Excel sheets in recommendations and monitoring

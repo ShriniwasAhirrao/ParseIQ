@@ -1,0 +1,15 @@
+Column,Data_Type,Null_Count,Unique_Values,Min_Length,Max_Length,Pattern,Anomalies_Detected,Data_Quality_Issues
+description,VARCHAR,0,1,58,58,Alphanumeric,None,Good
+pricing,OBJECT,0,1,,,Fixed values,None,Good
+media,OBJECT,0,1,,,Fixed values,None,Good
+name,VARCHAR,0,1,29,29,Alphanumeric,None,Good
+brand,VARCHAR,0,1,9,9,Alphanumeric,None,Good
+reviews,OBJECT,0,1,,,Fixed values,None,Good
+inventory,OBJECT,0,1,,,Fixed values,None,Good
+id,INTEGER,0,1,,,Sequential,None,Good
+category,OBJECT,0,1,,,Fixed values,None,Good
+specifications,OBJECT,0,1,,,Fixed values,None,Good
+createdAt,VARCHAR,0,1,20,20,Free text,None,Good
+updatedAt,VARCHAR,0,1,20,20,Free text,None,Good
+sku,VARCHAR,0,1,7,7,Alphanumeric,None,Good
+status,VARCHAR,0,1,6,6,Alphanumeric,None,Good

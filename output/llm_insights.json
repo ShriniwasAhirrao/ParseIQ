@@ -1,0 +1,145 @@
+{
+  "dataset_overview": {
+    "table_count": 1,
+    "table_names": [
+      "unknown_table"
+    ],
+    "dataset_type": "single_table",
+    "cross_table_relationships": [],
+    "total_records": 0,
+    "analysis_timestamp": "2025-07-27T16:16:14.044567"
+  },
+  "overall_assessment": {
+    "quality_grade": "C",
+    "corrected_score": 50,
+    "overall_score": 50,
+    "confidence_score": 75,
+    "scoring_methodology": {
+      "completeness_weight": 30,
+      "validity_weight": 25,
+      "consistency_weight": 25,
+      "business_rule_compliance_weight": 20
+    },
+    "component_scores": {
+      "completeness": 50,
+      "validity": 50,
+      "consistency": 50,
+      "business_rule_compliance": 50
+    },
+    "production_readiness": "Needs Review",
+    "key_strengths": [
+      "Data structure is parseable",
+      "Basic format validation passed"
+    ],
+    "primary_concerns": [
+      "Found 0 logical issues",
+      "Business rule validation needed",
+      "Data quality monitoring required"
+    ],
+    "improvement_potential": "High - automated analysis suggests significant opportunities for improvement",
+    "summary": "Fallback analysis used due to LLM processing issue - consider re-running with LLM for detailed insights"
+  },
+  "table_analysis": [
+    {
+      "table_name": "unknown_table",
+      "record_count": 0,
+      "table_quality_score": 50,
+      "completeness_rate": 50,
+      "validity_rate": 50,
+      "consistency_rate": 50,
+      "business_rule_compliance": 50,
+      "critical_fields": [],
+      "relationship_role": "standalone",
+      "key_issues": [
+        "Automated analysis found 0 critical issues",
+        "Detected 0 major data quality issues",
+        "Business rule compliance at 50.0%"
+      ]
+    }
+  ],
+  "cross_table_analysis": {
+    "referential_integrity_score": 100,
+    "relationship_violations": [],
+    "orphaned_records": [],
+    "consistency_issues": [],
+    "schema_evolution_detected": false
+  },
+  "critical_issues": [
+    {
+      "issue": "Automated Data Quality Assessment",
+      "severity": "MEDIUM",
+      "category": "Data_Quality",
+      "table": "unknown_table",
+      "description": "Automated analysis identified 0 data quality issues requiring attention",
+      "business_impact": "Potential impact on data reliability and business operations",
+      "root_cause": "Comprehensive validation reveals data integrity concerns",
+      "affected_records": [],
+      "affected_records_pct": 0.0,
+      "potential_consequences": [
+        "Data reliability issues",
+        "Business process impacts",
+        "Reporting accuracy concerns"
+      ],
+      "specific_fix": "Implement comprehensive data validation and cleansing process"
+    }
+  ],
+  "field_analysis": [],
+  "business_rule_violations": [],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "Data_Validation",
+      "action": "Implement comprehensive data quality validation pipeline",
+      "rationale": "Automated analysis suggests significant data quality improvements needed",
+      "estimated_effort": "Medium",
+      "expected_impact": "Significant improvement in data reliability and business confidence",
+      "timeline": "2-4 weeks",
+      "success_criteria": "Reduce logical issues from 0 to <10",
+      "dependencies": [
+        "Data quality tools implementation",
+        "Business rule definition"
+      ],
+      "cost_benefit": "Medium cost, high business value - essential for data-driven decisions"
+    }
+  ],
+  "validation_pipeline_recommendations": {
+    "immediate_validations": [
+      {
+        "rule": "Implement null value checks for critical fields",
+        "description": "Ensure data completeness for business-critical fields",
+        "severity": "HIGH"
+      }
+    ],
+    "cross_table_validations": [],
+    "format_validations": [
+      {
+        "rule": "Validate data formats match expected patterns",
+        "description": "Ensure data formats comply with business requirements",
+        "severity": "MEDIUM"
+      }
+    ]
+  },
+  "risk_assessment": {
+    "overall_risk_level": "Low",
+    "data_reliability_risk": "Low",
+    "business_impact_risk": "Low",
+    "compliance_risk": "MEDIUM",
+    "operational_risk": "Low",
+    "security_risk": "LOW",
+    "financial_impact": "MEDIUM",
+    "reputation_risk": "MEDIUM",
+    "cross_table_integrity_risk": "LOW",
+    "risk_details": "Automated analysis identified 0 issues requiring attention",
+    "mitigation_urgency": "High priority for data quality improvement initiative"
+  },
+  "enrichment_metadata": {
+    "timestamp": "2025-07-27T16:16:14.044567",
+    "model_used": "fallback_analysis",
+    "validation_performed": true,
+    "logical_issues_found": 0,
+    "data_integrity_checked": true,
+    "current_date_context": "2025-07-27",
+    "dataset_type": "single_table",
+    "note": "Fallback analysis used due to LLM processing issue - consider re-running with LLM for detailed insights"
+  }
+}

@@ -1,0 +1,2 @@
+Column,Data_Type,Null_Count,Unique_Values,Min_Length,Max_Length,Pattern,Anomalies_Detected,Data_Quality_Issues
+0,VARCHAR,0,6,11,20,Free text,None,Good

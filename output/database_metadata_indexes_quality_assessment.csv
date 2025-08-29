@@ -1,0 +1,9 @@
+Metric,Score,Details,Recommendation
+Completeness,0.0%,0 missing values,Improve data collection processes
+Consistency,0.0%,0 format inconsistencies,Standardize data formats
+Accuracy,0.0%,0 potential accuracy issues,Review and validate data accuracy
+Validity,0.0%,0 format violations,Fix invalid data formats
+Uniqueness,0.0%,0 duplicate ID issues,Ensure ID uniqueness
+Timeliness,0.0%,Some outdated records,Update data more frequently
+Overall Quality,0.0%,Needs significant improvement,Comprehensive quality improvement needed
+Critical Issue: Automated Data Quality Assessm...,HIGH,Automated analysis identified 0 data quality issues requiring attention,Implement comprehensive data validation and cleansing process

@@ -1,0 +1,11 @@
+Column,Data_Type,Null_Count,Unique_Values,Min_Length,Max_Length,Pattern,Anomalies_Detected,Data_Quality_Issues
+averageSessionDuration,INTEGER,0,1,,,Sequential,None,Good
+date,VARCHAR,0,1,10,10,Alphanumeric,None,Good
+bounceRate,DECIMAL,0,1,,,Currency,None,Good
+visitors,OBJECT,0,1,,,Fixed values,None,Good
+pageViews,INTEGER,0,1,,,Sequential,None,Good
+trafficSources,OBJECT,0,1,,,Fixed values,None,Good
+geography,ARRAY,0,1,,,Fixed values,None,Good
+conversionRate,DECIMAL,0,1,,,Currency,None,Good
+topPages,ARRAY,0,1,,,Fixed values,None,Good
+devices,OBJECT,0,1,,,Fixed values,None,Good

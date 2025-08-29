@@ -1,0 +1,2 @@
+user_orders,project_users,order_products,user_notifications
+users.id -> orders.customerId,users.id -> projects.team.members.userId,orders.items.productId -> products.id,users.id -> notifications.userId
