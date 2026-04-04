@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+
+# Pytest
+.pytest_cache/
+
+# Generated at runtime — do not commit
+debug_output/*
+logs/*
+output/*.csv
+output/*.xlsx
+output/*.json
+
+# Keep directory structure
+!debug_output/.gitkeep
+!logs/.gitkeep
+!output/.gitkeep
+
+# Large generated test files
+input/stress_test_data.json
+
+# Coverage reports
+.coverage
+coverage.xml

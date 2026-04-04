@@ -1,0 +1,28 @@
+# Core dependencies
+requests==2.31.0
+numpy==1.24.3
+pandas==2.0.3
+scipy==1.11.1
+
+# Configuration and environment
+python-dotenv
+
+# JSON and schema validation
+jsonschema==4.19.0
+
+# File format support
+chardet==5.2.0           # Character encoding detection
+openpyxl==3.1.2          # Excel file support
+xmltodict==0.13.0        # XML to dict conversion
+xmltodict
+
+# Optional: Additional data processing
+python-dateutil==2.8.2   # Date parsing and manipulation
+tqdm==4.66.1             # Progress bars for long operations
+
+# Development and testing (optional)
+pytest==7.4.2
+pytest-cov==4.1.0
+
+# Logging and debugging
+colorama==0.4.6          # Colored terminal output
