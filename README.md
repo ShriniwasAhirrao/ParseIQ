@@ -438,4 +438,4 @@ MIT
 
 ## Author
 
-Built by Shriniwas Ahirrao at [Ilink Digital](https://ilinkdigital.com).
+Built by [Shriniwas Ahirrao](https://github.com/ShriniwasAhirrao).

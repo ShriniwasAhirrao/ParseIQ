@@ -7,9 +7,9 @@ name = "parseiq"
 version = "0.0.1"
 description = "AI-powered data quality and metadata analysis agent"
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [
-    { name = "Ilink Digital", email = "dev@ilinkdigital.com" }
+    { name = "Shriniwas Ahirrao", email = "shriniwasahirrao@gmail.com" }
 ]
 requires-python = ">=3.9"
 keywords = ["data-quality", "metadata", "data-profiling", "llm", "etl"]
