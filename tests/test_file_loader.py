@@ -35,10 +35,11 @@ class TestFileLoader(unittest.TestCase):
         # scalar dict with no array children becomes {"main_table": [data]}.
         mock_load_json.return_value = [{"key": "value"}]
         result = self.loader.load_file('test.json')
-        # After flattening a list-of-dicts, result is a table dict
+        # After flattening a list-of-dicts, result is a table dict.
+        # Root table is named after the file stem ('test' for 'test.json')
         self.assertIsInstance(result, dict)
-        self.assertIn('main_table', result)
-        self.assertEqual(result['main_table'][0]['key'], 'value')
+        root_table = next(k for k in result if not k.startswith('__path__'))
+        self.assertEqual(result[root_table][0]['key'], 'value')
 
     @patch('file_loader.loader.FileLoader._detect_encoding', return_value='utf-8')
     @patch('builtins.open', new_callable=mock_open, read_data='[{"a":1}]')

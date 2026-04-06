@@ -24,21 +24,36 @@ import os
 import sys
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# --────────────────────────────────────────────────────────────────────────────
 # Helpers
-# ──────────────────────────────────────────────────────────────────────────────
+# --────────────────────────────────────────────────────────────────────────────
 
-def _get_api_key_from_env() -> str | None:
-    return (
-        os.getenv("OPENROUTER_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-        or os.getenv("ANTHROPIC_API_KEY")
-    )
+def _get_api_key_from_env(provider: str = None) -> str | None:
+    """Return the best API key for the given provider, falling back to any known key."""
+    _provider_env = {
+        'openrouter':  'OPENROUTER_API_KEY',
+        'openai':      'OPENAI_API_KEY',
+        'anthropic':   'ANTHROPIC_API_KEY',
+        'claude':      'ANTHROPIC_API_KEY',
+        'gemini':      'GEMINI_API_KEY',
+        'perplexity':  'PERPLEXITY_API_KEY',
+    }
+    if provider and provider in _provider_env:
+        key = os.getenv(_provider_env[provider])
+        if key:
+            return key
+    # Fallback: first key found across all providers
+    for env_var in _provider_env.values():
+        key = os.getenv(env_var)
+        if key:
+            return key
+    return None
 
 
 def _print_banner():
+    from parseiq import __version__
     print("=" * 55)
-    print("  ParseIQ — AI-Powered Data Quality Agent  v0.0.1")
+    print(f"  ParseIQ - AI-Powered Data Quality Agent  v{__version__}")
     print("=" * 55)
 
 
@@ -77,9 +92,9 @@ def _save_env(key: str, value: str, env_file: str = ".env"):
         f.writelines(lines)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# --────────────────────────────────────────────────────────────────────────────
 # Commands
-# ──────────────────────────────────────────────────────────────────────────────
+# --────────────────────────────────────────────────────────────────────────────
 
 def cmd_version(_args):
     from parseiq import __version__
@@ -96,8 +111,23 @@ def cmd_config(_args):
     print(f"  Max Tokens : {Config.LLM_SETTINGS['max_tokens']}")
     print(f"  Temperature: {Config.LLM_SETTINGS['temperature']}")
     print(f"  Timeout    : {Config.LLM_SETTINGS['timeout']}s")
-    print(f"  API Key    : {'SET (' + key[:12] + '...)' if key else 'NOT SET'}")
     print(f"  .env file  : {'found' if os.path.exists('.env') else 'not found'}")
+    print("\n  API keys detected:")
+    _env_vars = [
+        ("OPENROUTER_API_KEY",  "OpenRouter"),
+        ("OPENAI_API_KEY",      "OpenAI"),
+        ("ANTHROPIC_API_KEY",   "Anthropic/Claude"),
+        ("GEMINI_API_KEY",      "Google Gemini"),
+        ("PERPLEXITY_API_KEY",  "Perplexity"),
+    ]
+    any_key = False
+    for env_var, label in _env_vars:
+        k = os.getenv(env_var)
+        if k:
+            print(f"    {label:<20} SET ({k[:12]}...)")
+            any_key = True
+    if not any_key:
+        print("    (none found — run 'parseiq init' to configure)")
     print("=" * 50)
     issues = Config.validate(require_llm_key=False)
     if issues:
@@ -111,103 +141,212 @@ def cmd_config(_args):
 
 def cmd_models(_args):
     _print_banner()
-    print("\nFREE models (no cost — require OpenRouter account):")
-    free = [
-        ("nvidia/nemotron-3-super-120b-a12b:free", "120B param, strong reasoning  [default]"),
-        ("mistralai/mistral-small-3.1-24b-instruct:free", "24B, fast responses"),
-        ("google/gemma-3-27b-it:free",              "27B, good for structured output"),
-        ("meta-llama/llama-3.3-70b-instruct:free",  "70B LLaMA, well-rounded"),
-        ("deepseek/deepseek-r1:free",               "Reasoning model, slower but thorough"),
-    ]
-    for model, desc in free:
-        print(f"  {model}")
-        print(f"    {desc}")
 
-    print("\nPAID models (need credits on your provider account):")
-    paid = [
-        ("openai/gpt-4o",          "openai",     "Best overall quality"),
-        ("openai/gpt-4o-mini",     "openai",     "Fast, cheap, good quality"),
-        ("anthropic/claude-3-5-sonnet", "openrouter", "Excellent at structured analysis"),
-        ("google/gemini-pro-1.5",  "openrouter", "Large context, multimodal"),
+    print("\n--OpenRouter (free tier, one account covers all models) --")
+    print("  Sign up free: https://openrouter.ai")
+    free_or = [
+        ("nvidia/nemotron-3-super-120b-a12b:free",       "120B, strong reasoning  [recommended default]"),
+        ("mistralai/mistral-small-3.1-24b-instruct:free","24B, fast responses"),
+        ("google/gemma-3-27b-it:free",                   "27B, good structured output"),
+        ("meta-llama/llama-3.3-70b-instruct:free",       "70B LLaMA, well-rounded"),
+        ("deepseek/deepseek-r1:free",                    "Reasoning model, thorough"),
     ]
-    for model, provider, desc in paid:
-        print(f"  {model}  [{provider}]")
-        print(f"    {desc}")
+    for model, desc in free_or:
+        print(f"    {model}")
+        print(f"      {desc}")
+    print("  Usage: parseiq analyze data.json --llm-provider openrouter --llm-model <model>")
 
-    print("\nLocal models (Ollama — no API key needed):")
+    print("\n--OpenAI (OPENAI_API_KEY) --")
+    openai_models = [
+        ("gpt-4o",      "Best overall quality"),
+        ("gpt-4o-mini", "Fast, cost-efficient"),
+        ("gpt-4-turbo", "Large context, strong reasoning"),
+    ]
+    for model, desc in openai_models:
+        print(f"    {model}  — {desc}")
+    print("  Usage: parseiq analyze data.json --llm-provider openai --llm-model gpt-4o")
+    print("         Set key: set OPENAI_API_KEY=sk-...")
+
+    print("\n--Anthropic / Claude (ANTHROPIC_API_KEY) --")
+    claude_models = [
+        ("claude-opus-4-5",        "Most capable, best for complex analysis"),
+        ("claude-sonnet-4-5",      "Balanced speed and quality  [recommended]"),
+        ("claude-haiku-4-5",       "Fastest, lowest cost"),
+        ("claude-3-5-sonnet-20241022", "Previous gen, still excellent"),
+    ]
+    for model, desc in claude_models:
+        print(f"    {model}  — {desc}")
+    print("  Usage: parseiq analyze data.json --llm-provider anthropic --llm-model claude-sonnet-4-5")
+    print("         Set key: set ANTHROPIC_API_KEY=sk-ant-...")
+    print("         Install:  pip install anthropic")
+
+    print("\n--Google Gemini (GEMINI_API_KEY) --")
+    gemini_models = [
+        ("gemini-1.5-pro",   "Large context (1M tokens), multimodal"),
+        ("gemini-1.5-flash", "Fast, cost-efficient"),
+        ("gemini-2.0-flash", "Latest, fast generation"),
+    ]
+    for model, desc in gemini_models:
+        print(f"    {model}  — {desc}")
+    print("  Usage: parseiq analyze data.json --llm-provider gemini --llm-model gemini-1.5-pro")
+    print("         Set key: set GEMINI_API_KEY=AIza...")
+    print("         Install:  pip install google-generativeai")
+    print("         Get free key: https://aistudio.google.com/app/apikey")
+
+    print("\n--Perplexity (PERPLEXITY_API_KEY) --")
+    perplexity_models = [
+        ("llama-3.1-sonar-large-128k-online", "Online search + reasoning"),
+        ("llama-3.1-sonar-small-128k-online", "Faster online model"),
+        ("llama-3.1-8b-instruct",             "Offline, lightweight"),
+    ]
+    for model, desc in perplexity_models:
+        print(f"    {model}  — {desc}")
+    print("  Usage: parseiq analyze data.json --llm-provider perplexity --llm-model llama-3.1-sonar-large-128k-online")
+    print("         Set key: set PERPLEXITY_API_KEY=pplx-...")
+
+    print("\n--Ollama (local, no API key needed) --")
     local = [
-        ("llama3",    "Meta LLaMA 3 8B"),
-        ("mistral",   "Mistral 7B"),
-        ("phi3",      "Microsoft Phi-3 Mini (very fast)"),
+        ("llama3",   "Meta LLaMA 3 8B"),
+        ("mistral",  "Mistral 7B"),
+        ("phi3",     "Microsoft Phi-3 Mini (very fast)"),
+        ("gemma2",   "Google Gemma 2 9B"),
     ]
     for model, desc in local:
-        print(f"  {model}")
-        print(f"    {desc}")
+        print(f"    {model}  — {desc}")
+    print("  Usage: parseiq analyze data.json --llm-provider ollama --llm-model llama3")
+    print("         Start server first: ollama serve")
 
-    print("\nTo use a model:")
-    print("  parseiq analyze data.json --llm-provider openrouter --llm-model <model-id>")
-    print("  parseiq analyze data.json --llm-provider ollama --llm-model llama3")
+    print("\n--Credit exhaustion? --")
+    print("  ParseIQ detects 402 errors and suggests free alternatives automatically.")
+    print("  Or run without LLM at any time:")
+    print("    parseiq analyze data.json --no-llm")
 
 
 def cmd_init(_args):
     _print_banner()
     print("\nFirst-time setup — press Enter to keep any default shown in brackets.\n")
 
-    # ── API Key ──
-    existing_key = _get_api_key_from_env()
-    if existing_key:
-        print(f"  API key already set in environment ({existing_key[:12]}...)")
-        change = _ask_choice("  Change it?", ["yes", "no"], "no")
-        if change == "no":
-            api_key = existing_key
-        else:
-            api_key = _ask("  Paste your new API key: ")
-    else:
-        print("  Get a FREE key at: https://openrouter.ai  (sign up → Keys tab)")
-        api_key = _ask("  Paste your OpenRouter API key (or press Enter to skip LLM): ")
+    # --Choose provider --
+    print("  Supported LLM providers:")
+    print("    1. openrouter  — free tier available, access to 100+ models (recommended)")
+    print("    2. openai      — OpenAI GPT-4o, GPT-4o-mini  (OPENAI_API_KEY)")
+    print("    3. anthropic   — Claude models  (ANTHROPIC_API_KEY, pip install anthropic)")
+    print("    4. gemini      — Google Gemini  (GEMINI_API_KEY, pip install google-generativeai)")
+    print("    5. perplexity  — Perplexity AI  (PERPLEXITY_API_KEY)")
+    print("    6. ollama      — Local models, no key needed  (ollama serve)")
+    print("    7. Skip LLM setup")
+    provider_choice = _ask("  Choose provider [1-7] (default 1): ", "1")
 
-    if api_key:
-        _save_env("OPENROUTER_API_KEY", api_key)
-        print("  Saved to .env")
-
-    # ── Model ──
-    print()
-    print("  Available free models:")
-    print("    1. nvidia/nemotron-3-super-120b-a12b:free  (default, best quality)")
-    print("    2. mistralai/mistral-small-3.1-24b-instruct:free  (faster)")
-    print("    3. meta-llama/llama-3.3-70b-instruct:free")
-    print("    4. Keep default")
-    choice = _ask("  Choose model [1-4] (default 1): ", "1")
-    model_map = {
-        "1": "nvidia/nemotron-3-super-120b-a12b:free",
-        "2": "mistralai/mistral-small-3.1-24b-instruct:free",
-        "3": "meta-llama/llama-3.3-70b-instruct:free",
-        "4": "",
+    _provider_info = {
+        "1": ("openrouter",  "OPENROUTER_API_KEY",  "https://openrouter.ai  (sign up → Keys tab)"),
+        "2": ("openai",      "OPENAI_API_KEY",      "https://platform.openai.com/api-keys"),
+        "3": ("anthropic",   "ANTHROPIC_API_KEY",   "https://console.anthropic.com/settings/keys"),
+        "4": ("gemini",      "GEMINI_API_KEY",      "https://aistudio.google.com/app/apikey  (free)"),
+        "5": ("perplexity",  "PERPLEXITY_API_KEY",  "https://www.perplexity.ai/settings/api"),
+        "6": ("ollama",      None,                  None),
+        "7": (None,          None,                  None),
     }
-    chosen_model = model_map.get(choice, "")
-    if chosen_model:
-        _save_env("PARSEIQ_MODEL", chosen_model)
-        print(f"  Model set to: {chosen_model}")
+    provider_name, env_var, key_url = _provider_info.get(provider_choice, (None, None, None))
 
-    # ── Output dir ──
+    api_key = None
+    if provider_name == "ollama":
+        print("  Ollama: make sure 'ollama serve' is running locally.")
+        print("  Start server and install a model:  ollama pull llama3")
+        _save_env("PARSEIQ_PROVIDER", "ollama")
+    elif provider_name and env_var:
+        existing_key = _get_api_key_from_env(provider_name)
+        if existing_key:
+            print(f"  {env_var} already set ({existing_key[:12]}...)")
+            change = _ask_choice("  Change it?", ["yes", "no"], "no")
+            if change == "no":
+                api_key = existing_key
+            else:
+                api_key = _ask(f"  Paste your {provider_name} API key: ")
+        else:
+            if key_url:
+                print(f"  Get your API key at: {key_url}")
+            api_key = _ask(f"  Paste your {provider_name} API key (or Enter to skip): ")
+
+        if api_key:
+            _save_env(env_var, api_key)
+            _save_env("PARSEIQ_PROVIDER", provider_name)
+            print(f"  Saved to .env")
+
+    # --Model selection --
+    print()
+    _model_menus = {
+        "openrouter": [
+            ("1", "nvidia/nemotron-3-super-120b-a12b:free",        "Best free model (recommended)"),
+            ("2", "mistralai/mistral-small-3.1-24b-instruct:free", "Fast free model"),
+            ("3", "meta-llama/llama-3.3-70b-instruct:free",        "LLaMA 70B free"),
+            ("4", "openai/gpt-4o",                                  "GPT-4o via OpenRouter (paid)"),
+            ("5", "anthropic/claude-3-5-sonnet",                    "Claude via OpenRouter (paid)"),
+        ],
+        "openai": [
+            ("1", "gpt-4o",      "Best quality"),
+            ("2", "gpt-4o-mini", "Fast, cost-efficient"),
+            ("3", "gpt-4-turbo", "Large context"),
+        ],
+        "anthropic": [
+            ("1", "claude-sonnet-4-5",           "Recommended — balanced speed/quality"),
+            ("2", "claude-opus-4-5",             "Most capable"),
+            ("3", "claude-haiku-4-5",            "Fastest, lowest cost"),
+            ("4", "claude-3-5-sonnet-20241022",  "Previous gen, still excellent"),
+        ],
+        "gemini": [
+            ("1", "gemini-1.5-pro",   "Large context, multimodal"),
+            ("2", "gemini-1.5-flash", "Fast, cost-efficient"),
+            ("3", "gemini-2.0-flash", "Latest flash model"),
+        ],
+        "perplexity": [
+            ("1", "llama-3.1-sonar-large-128k-online", "Online search + reasoning"),
+            ("2", "llama-3.1-sonar-small-128k-online", "Faster online model"),
+        ],
+        "ollama": [
+            ("1", "llama3",   "LLaMA 3 8B"),
+            ("2", "mistral",  "Mistral 7B"),
+            ("3", "phi3",     "Phi-3 Mini (very fast)"),
+            ("4", "gemma2",   "Gemma 2 9B"),
+        ],
+    }
+
+    chosen_model = ""
+    if provider_name and provider_name in _model_menus:
+        print(f"  Available {provider_name} models:")
+        menu = _model_menus[provider_name]
+        for num, model_id, desc in menu:
+            default_tag = "  [default]" if num == "1" else ""
+            print(f"    {num}. {model_id}  — {desc}{default_tag}")
+        last = str(len(menu) + 1)
+        print(f"    {last}. Keep current default")
+        choice = _ask(f"  Choose model [1-{last}] (default 1): ", "1")
+        model_map = {num: mid for num, mid, _ in menu}
+        chosen_model = model_map.get(choice, "")
+        if chosen_model:
+            _save_env("PARSEIQ_MODEL", chosen_model)
+            print(f"  Model set to: {chosen_model}")
+
+    # --Output dir --
     print()
     out = _ask("  Default output directory [output]: ", "output")
     if out and out != "output":
         _save_env("PARSEIQ_OUTPUT_DIR", out)
 
-    # ── Test connection ──
-    if api_key:
+    # --Test connection --
+    if api_key and provider_name not in (None, "ollama"):
         print()
         test = _ask_choice("  Test API connection now?", ["yes", "no"], "yes")
         if test == "yes":
             print("  Testing connection...")
             try:
-                os.environ["OPENROUTER_API_KEY"] = api_key
                 from parseiq.config import Config
                 from parseiq.step2_llm_enricher.llm_agent import LLMEnricher
                 cfg = Config.get_llm_config()
                 cfg["api_key"] = api_key
+                if chosen_model:
+                    cfg["model"] = chosen_model
                 enricher = LLMEnricher(cfg)
+                enricher._provider = provider_name
                 ok = enricher.test_connection()
                 if ok:
                     print("  Connection OK — LLM is reachable.")
@@ -218,7 +357,9 @@ def cmd_init(_args):
 
     print()
     print("Setup complete. Run:")
-    print("  parseiq analyze <your-file.json>")
+    print(f"  parseiq analyze <your-file.json>")
+    if provider_name:
+        print(f"  parseiq analyze <your-file.json> --llm-provider {provider_name}")
     print("  parseiq analyze <your-file.json> --no-llm   (skip AI, always works)")
 
 
@@ -254,14 +395,20 @@ def cmd_analyze(args):
         print(f"Error: file not found: {args.file}")
         sys.exit(1)
 
-    # ── Resolve API key ──
-    llm_api_key = args.llm_api_key or _get_api_key_from_env()
+    # --Resolve API key --
+    llm_api_key = args.llm_api_key or _get_api_key_from_env(args.llm_provider)
 
     use_llm = not args.no_llm
+    # Ollama doesn't need an API key — use a placeholder so key checks pass
+    if use_llm and args.llm_provider == 'ollama' and not llm_api_key:
+        llm_api_key = 'ollama'  # Ollama ignores the Authorization header
+
     if use_llm and not llm_api_key:
-        print("No API key found.")
-        print("  Option 1: parseiq init              (interactive setup)")
-        print("  Option 2: set OPENROUTER_API_KEY=sk-or-v1-...  (env var)")
+        print("No API key found for provider:", args.llm_provider)
+        print("  Option 1: parseiq init                    (interactive setup)")
+        print("  Option 2: set the appropriate env var:")
+        print("              OPENROUTER_API_KEY / OPENAI_API_KEY /")
+        print("              ANTHROPIC_API_KEY / GEMINI_API_KEY / PERPLEXITY_API_KEY")
         print("  Option 3: parseiq analyze <file> --no-llm   (skip AI)")
         print()
         if sys.stdin.isatty():
@@ -274,18 +421,38 @@ def cmd_analyze(args):
             print("Running in local mode (--no-llm).")
             use_llm = False
 
-    # ── Interactive model selection if LLM but no model specified ──
+    # --Interactive model selection if LLM but no model specified --
     llm_model = args.llm_model
+    _provider_defaults = {
+        'openrouter':  'nvidia/nemotron-3-super-120b-a12b:free',
+        'openai':      'gpt-4o-mini',
+        'anthropic':   'claude-sonnet-4-5',
+        'claude':      'claude-sonnet-4-5',
+        'gemini':      'gemini-1.5-flash',
+        'perplexity':  'llama-3.1-sonar-large-128k-online',
+        'azure':       'gpt-4o',
+        'ollama':      'llama3',
+    }
     if use_llm and not llm_model and sys.stdin.isatty() and not args.quiet:
         from parseiq.config import Config
-        default_model = Config.MODEL_NAME
+        default_model = _provider_defaults.get(args.llm_provider, Config.MODEL_NAME)
         print(f"\nUsing model: {default_model}")
         change = _ask_choice("Use a different model?", ["yes", "no"], "no")
         if change == "yes":
-            print("  Common choices:")
-            print("    nvidia/nemotron-3-super-120b-a12b:free")
-            print("    mistralai/mistral-small-3.1-24b-instruct:free")
-            print("    meta-llama/llama-3.3-70b-instruct:free")
+            print(f"  Common {args.llm_provider} models (run 'parseiq models' for full list):")
+            _quick_models = {
+                'openrouter':  ['nvidia/nemotron-3-super-120b-a12b:free',
+                                'mistralai/mistral-small-3.1-24b-instruct:free',
+                                'meta-llama/llama-3.3-70b-instruct:free'],
+                'openai':      ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+                'anthropic':   ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5'],
+                'claude':      ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5'],
+                'gemini':      ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash'],
+                'perplexity':  ['llama-3.1-sonar-large-128k-online', 'llama-3.1-8b-instruct'],
+                'ollama':      ['llama3', 'mistral', 'phi3', 'gemma2'],
+            }
+            for m in _quick_models.get(args.llm_provider, []):
+                print(f"    {m}")
             llm_model = _ask(f"  Model name [{default_model}]: ", default_model)
 
     if not args.quiet:
@@ -314,7 +481,7 @@ def cmd_analyze(args):
         print("ANALYSIS COMPLETE")
         print("=" * 55)
         print(f"  Tables analysed : {len(result.tables)}")
-        print(f"  Total records   : {sum(1 for _ in result.tables):,}" )
+        print(f"  Total records   : {result.pipeline_info.get('total_records', 0):,}")
         print(f"  Avg quality     : {result.overall_quality_score}/100")
         print(f"  Total anomalies : {result.total_anomalies}")
         print(f"  LLM grade       : {result.llm_grade or 'N/A (local mode)'}")
@@ -334,18 +501,27 @@ def cmd_analyze(args):
                     for col, flags in cols.items():
                         print(f"  [{tname}.{col}] {', '.join(flags)}")
         print()
-        print(f"Open the Excel report: {args.output}/complete_data_analysis.xlsx")
+        xlsx_path = os.path.abspath(os.path.join(args.output, "complete_data_analysis.xlsx"))
+        print(f"For a more detailed report, refer to:")
+        print(f"  {xlsx_path}")
 
     # Machine-readable exit code: 0 = OK, 1 = quality below threshold
     if args.fail_under and result.overall_quality_score < args.fail_under:
         sys.exit(1)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# --────────────────────────────────────────────────────────────────────────────
 # Argument parser
-# ──────────────────────────────────────────────────────────────────────────────
+# --────────────────────────────────────────────────────────────────────────────
 
 def main():
+    # Ensure UTF-8 output on Windows consoles that default to cp1252
+    if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except AttributeError:
+            pass  # Python < 3.7
+
     parser = argparse.ArgumentParser(
         prog="parseiq",
         description="ParseIQ — AI-powered data quality analysis",
@@ -363,23 +539,23 @@ def main():
     )
     sub = parser.add_subparsers(dest="command", metavar="command")
 
-    # ── init ──
+    # --init --
     sub.add_parser("init", help="Interactive first-time setup (API key, model, output dir)")
 
-    # ── version ──
+    # --version --
     sub.add_parser("version", help="Print version and exit")
 
-    # ── config ──
+    # --config --
     sub.add_parser("config", help="Show current configuration and environment")
 
-    # ── models ──
+    # --models --
     sub.add_parser("models", help="List available LLM models (free, paid, local)")
 
-    # ── validate ──
+    # --validate --
     val = sub.add_parser("validate", help="Quick file check — tables/columns/record count, no full analysis")
     val.add_argument("file", help="Path to input file")
 
-    # ── analyze ──
+    # --analyze --
     analyze = sub.add_parser("analyze", help="Analyse a data file for quality issues")
     analyze.add_argument("file", help="Path to input file (JSON, CSV, XML, Excel)")
     analyze.add_argument("--output", "-o", default="output",
@@ -387,7 +563,8 @@ def main():
     analyze.add_argument("--no-llm", action="store_true",
                          help="Skip LLM enrichment — pure local mode, no API key needed")
     analyze.add_argument("--llm-provider", default="openrouter",
-                         choices=["openrouter", "openai", "azure", "ollama"],
+                         choices=["openrouter", "openai", "anthropic", "claude",
+                                  "gemini", "perplexity", "azure", "ollama"],
                          help="LLM provider (default: openrouter)")
     analyze.add_argument("--llm-model", default=None,
                          help="Model name, e.g. gpt-4o, llama3, mistral")

@@ -985,31 +985,61 @@ class LLMEnricher:
             "business_rule_compliance": round(business_compliance_score, 1)
         }
 
+    # ── Provider base URLs ────────────────────────────────────────────────────
+    _PROVIDER_BASE_URLS = {
+        'openrouter': 'https://openrouter.ai/api/v1',
+        'openai':     'https://api.openai.com/v1',
+        'perplexity': 'https://api.perplexity.ai',
+        # anthropic and gemini use their own SDKs — no base URL needed here
+        # ollama and azure: user must supply --llm-base-url
+    }
+
+    _FREE_FALLBACK_MODELS = [
+        "nvidia/nemotron-3-super-120b-a12b:free  (via openrouter.ai — free account)",
+        "mistralai/mistral-small-3.1-24b-instruct:free  (via openrouter.ai)",
+        "meta-llama/llama-3.3-70b-instruct:free  (via openrouter.ai)",
+        "llama3  (via Ollama — fully local, no API key)",
+    ]
+
+    def _detect_provider(self) -> str:
+        """Infer provider from explicit _provider attr or model name."""
+        provider = getattr(self, '_provider', '') or ''
+        if provider in ('anthropic', 'claude'):
+            return 'anthropic'
+        if provider == 'gemini':
+            return 'gemini'
+        model = self.model or ''
+        if model.startswith('claude-'):
+            return 'anthropic'
+        if model.startswith('gemini-') or 'gemini' in model.lower():
+            return 'gemini'
+        return 'openai_compatible'
+
     def test_connection(self) -> bool:
         """Smart connection test: Treat 429 as 'degraded reachable', not fatal."""
         now = time.time()
         if now - self._last_test_time < self._test_interval:
-            self.logger.info(f"⏱️  Test debounced")
+            self.logger.info("⏱️  Test debounced")
             return True  # Assume OK
-            
+
         try:
             self.logger.info("🧪 Testing API (simple ping)")
             if not self._consume_token():
                 self.logger.warning("Local rate limit - test skipped")
                 return True  # Degraded OK
-                
+
             response = self._make_api_request("ping")  # Simple test prompt
-            
+
             self._last_test_time = now
             self.logger.info("✅ API fully operational")
             return True
-            
+
         except requests.exceptions.RequestException as e:
             error_str = str(e).lower()
             if '429' in error_str or 'rate limit' in error_str:
                 self.logger.warning(f"🌐 API reachable but throttled: {e}")
-                self._last_test_time = now  # Cache as 'degraded OK'
-                return True  # 429 = reachable, just throttled
+                self._last_test_time = now
+                return True
             else:
                 self.logger.error(f"❌ True connection failure: {e}")
                 import traceback
@@ -1020,22 +1050,63 @@ class LLMEnricher:
             import traceback
             self.logger.error(f"Full traceback: {traceback.format_exc()}")
             return False
-            
+
     def _make_api_request(self, prompt: str) -> str:
-        """Production-grade OpenRouter API request with:
-        - Token bucket RPM limiter (10/min)
-        - 429 Retry-After respect
-        - Adaptive jittered backoff
-        - Graceful fallback after max_retries
-        """
-        
-        # Lazy API key validation
+        """Dispatch to the right provider backend."""
         if not self.api_key:
             raise ValueError(
                 "No LLM API key provided. Pass llm_api_key='sk-...' to run() "
-                "or set the OPENROUTER_API_KEY environment variable."
+                "or set the appropriate API key environment variable."
             )
 
+        provider = self._detect_provider()
+        self.logger.info(f"Provider detected: {provider} | Model: {self.model}")
+
+        if provider == 'anthropic':
+            return self._make_api_request_anthropic(prompt)
+        elif provider == 'gemini':
+            return self._make_api_request_gemini(prompt)
+        else:
+            return self._make_api_request_openai_compatible(prompt)
+
+    def _make_api_request_anthropic(self, prompt: str) -> str:
+        """Call Anthropic Claude directly via the anthropic SDK."""
+        try:
+            import anthropic as _anthropic
+        except ImportError:
+            raise ImportError(
+                "The 'anthropic' package is required for Claude models.\n"
+                "Install it:  pip install anthropic"
+            )
+
+        client = _anthropic.Anthropic(api_key=self.api_key)
+        self.logger.info(f"Calling Anthropic SDK | model={self.model}")
+        message = client.messages.create(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return message.content[0].text
+
+    def _make_api_request_gemini(self, prompt: str) -> str:
+        """Call Google Gemini via the google-generativeai SDK."""
+        try:
+            import google.generativeai as _genai
+        except ImportError:
+            raise ImportError(
+                "The 'google-generativeai' package is required for Gemini models.\n"
+                "Install it:  pip install google-generativeai"
+            )
+
+        _genai.configure(api_key=self.api_key)
+        model_name = self.model  # e.g. "gemini-1.5-pro"
+        self.logger.info(f"Calling Gemini SDK | model={model_name}")
+        gemini_model = _genai.GenerativeModel(model_name)
+        response = gemini_model.generate_content(prompt)
+        return response.text
+
+    def _make_api_request_openai_compatible(self, prompt: str) -> str:
+        """OpenAI-compatible REST call — works for OpenRouter, OpenAI, Perplexity, Ollama, Azure."""
         # RPM Token bucket limiter
         if not self._consume_token():
             raise Exception("Local rate limit exceeded (10 RPM)")
@@ -1044,9 +1115,9 @@ class LLMEnricher:
             'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json',
             'HTTP-Referer': self.site_url,
-            'X-Title': self.site_name  # OpenRouter standard header
+            'X-Title': self.site_name,
         }
-        
+
         data = {
             'model': self.model,
             'messages': [{'role': 'user', 'content': prompt}],
@@ -1054,22 +1125,32 @@ class LLMEnricher:
             'temperature': self.temperature,
             'stream': False,
         }
-        
+
         max_retries = 3
         base_delay = 2
-
-        self.logger.info(f"Calling model: {self.model}")
+        self.logger.info(f"Calling model: {self.model} @ {self.base_url}")
 
         for attempt in range(max_retries):
+            delay = base_delay * (2 ** attempt) + self._jitter()
             try:
                 response = requests.post(
                     f'{self.base_url}/chat/completions',
                     headers=headers,
                     json=data,
-                    timeout=self.config.get('timeout', 240)
+                    timeout=self.config.get('timeout', 240),
                 )
 
-                if response.status_code == 429:  # Rate limited
+                if response.status_code == 402:
+                    self.logger.error("402 Payment Required — credits exhausted")
+                    print("\n[ParseIQ] Credits exhausted on your current plan.")
+                    print("  Free alternatives you can use right now:")
+                    for m in self._FREE_FALLBACK_MODELS:
+                        print(f"    {m}")
+                    print("  Re-run with:  parseiq analyze <file> --llm-provider openrouter "
+                          "--llm-model nvidia/nemotron-3-super-120b-a12b:free")
+                    raise Exception("402 Payment Required: credits exhausted.")
+
+                if response.status_code == 429:
                     retry_after = int(response.headers.get('Retry-After', base_delay * (2 ** attempt)))
                     remaining = response.headers.get('X-RateLimit-Remaining', 'N/A')
                     self.logger.warning(
@@ -1078,11 +1159,8 @@ class LLMEnricher:
                     )
                     if self.debug:
                         print(f"⏳ Rate limited. Waiting {retry_after}s")
-
-                    # Only bail out if truly a daily/hourly lockout (>= 5 minutes Retry-After)
                     if retry_after >= 300:
                         raise Exception(f"Rate limit lockout (Retry-After={retry_after}s). Wait before retrying.")
-
                     time.sleep(retry_after)
                     continue
 
@@ -1098,16 +1176,13 @@ class LLMEnricher:
 
                 response.raise_for_status()
                 result = response.json()
-
                 self._tokens = min(self._max_tokens, self._tokens + 1)
                 return result['choices'][0]['message']['content']
 
             except requests.exceptions.Timeout:
                 self.logger.warning(f"⏰ Timeout (attempt {attempt+1}/{max_retries})")
-                delay = base_delay * (2 ** attempt) + self._jitter()
             except requests.exceptions.RequestException as e:
                 self.logger.warning(f"🌐 Network error (attempt {attempt+1}/{max_retries}): {e}")
-                delay = base_delay * (2 ** attempt) + self._jitter()
             except KeyError as e:
                 self.logger.error(f"❌ Invalid API response format: {e}")
                 raise
@@ -1258,7 +1333,9 @@ class LLMEnricher:
         except Exception as e:
             self.logger.error(f"Failed to save debug file: {e}")
             
-    def enrich_metadata(self, metadata_summary: Dict[str, Any], model: str = None) -> Dict[str, Any]:
+    def enrich_metadata(self, metadata_summary: Dict[str, Any], model: str = None,
+                        llm_provider: str = None, llm_api_key: str = None,
+                        llm_model: str = None, llm_base_url: str = None) -> Dict[str, Any]:
         """Enrich metadata using LLM analysis with comprehensive multi-table validation.""" 
         
         import traceback
@@ -1275,9 +1352,20 @@ class LLMEnricher:
         self.logger.info(f"'dataset_overview' in input: {'dataset_overview' in metadata_summary}")
         
         try:
-            if model:
-                self.logger.info(f"Overriding model to: {model}")
-                self.model = model
+            # Apply per-call BYOK overrides
+            if llm_api_key:
+                self.api_key = llm_api_key
+            if llm_model or model:
+                self.model = llm_model or model
+                self.logger.info(f"Overriding model to: {self.model}")
+            if llm_provider:
+                self._provider = llm_provider
+                # Auto-set base_url from provider unless caller already specified one
+                if not llm_base_url and llm_provider in self._PROVIDER_BASE_URLS:
+                    self.base_url = self._PROVIDER_BASE_URLS[llm_provider]
+                    self.logger.info(f"Auto base_url for {llm_provider}: {self.base_url}")
+            if llm_base_url:
+                self.base_url = llm_base_url
             self.logger.info("Starting comprehensive metadata enrichment process")
             if self.debug:
                 print("🔍 DEBUG: Starting comprehensive metadata enrichment process")

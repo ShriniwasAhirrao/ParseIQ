@@ -485,6 +485,103 @@ def _fallback_enrichment() -> Dict[str, Any]:
     }
 
 
+def _describe_issue(flag: str, col: str, table: str, dtype: str,
+                    null_pct: float, mn: Any, mx: Any,
+                    unique_ratio: float, rec_count: int):
+    """Return (description, business_impact, recommended_fix, effort) for an anomaly flag."""
+    col_ref = f"'{col}' in '{table}'"
+
+    if flag == "HIGH_NULL_RATE":
+        desc   = f"{null_pct}% of values in {col_ref} are missing ({int(null_pct * rec_count / 100)} of {rec_count} records)"
+        impact = ("High null rate will break aggregations, averages, and joins that depend on this column. "
+                  "Downstream reports will silently undercount.")
+        fix    = (f"1. Run: SELECT COUNT(*) FROM {table} WHERE {col} IS NULL  "
+                  f"2. Determine if nulls are expected (optional field) or data gaps.  "
+                  f"3. Add a NOT NULL constraint or default value at the source if required.  "
+                  f"4. Document nullability in data dictionary.")
+        effort = "Medium"
+
+    elif flag == "NEGATIVE_VALUES_DETECTED":
+        desc   = f"Negative values found in {col_ref} (min: {mn}, max: {mx}, type: {dtype})"
+        impact = ("Negative values in numeric fields corrupt SUM/AVG aggregations and may indicate "
+                  "sign-flip bugs, refunds coded incorrectly, or test data contamination.")
+        fix    = (f"1. Run: SELECT * FROM {table} WHERE {col} < 0  "
+                  f"2. Decide: are negatives valid (e.g. credit adjustments) or errors?  "
+                  f"3. If errors: add CHECK ({col} >= 0) constraint at source.  "
+                  f"4. If valid: document the business meaning and add a 'credit_flag' column for clarity.")
+        effort = "Low"
+
+    elif flag == "FUTURE_DATE_DETECTED":
+        desc   = f"Future dates detected in {col_ref} — values beyond today's date (max: {mx})"
+        impact = ("Future dates break time-series analyses, age/tenure calculations, and SLA reporting. "
+                  "They usually indicate placeholder, test, or incorrectly formatted records.")
+        fix    = (f"1. Run: SELECT * FROM {table} WHERE {col} > CURRENT_DATE  "
+                  f"2. Determine if future dates are intentionally scheduled (e.g. due_date) or errors.  "
+                  f"3. For event columns (hire_date, created_at): add validation to reject future values at ingestion.  "
+                  f"4. Flag or quarantine affected rows for manual review.")
+        effort = "Low"
+
+    elif flag == "NUMERIC_OUTLIERS_DETECTED":
+        desc   = f"Statistical outliers detected in {col_ref} — values far outside normal range (min: {mn}, max: {mx})"
+        impact = ("Outliers skew mean/std calculations and can mask real trends. "
+                  "They may indicate data entry errors, unit mismatches (e.g. dollars vs cents), or genuine edge cases.")
+        fix    = (f"1. Run: SELECT * FROM {table} WHERE {col} < [lower_bound] OR {col} > [upper_bound]  "
+                  f"2. Review distribution — use percentiles not mean for skewed data.  "
+                  f"3. Validate unit consistency (e.g. all values in same currency/unit).  "
+                  f"4. Cap extreme values or move to a separate 'outlier' table if they are genuine but rare.")
+        effort = "Medium"
+
+    elif flag == "MIXED_DATA_TYPES":
+        desc   = f"Column {col_ref} contains mixed data types — both {dtype} and non-{dtype} values detected"
+        impact = ("Mixed types cause type-cast errors in ETL pipelines, break schema inference, "
+                  "and produce incorrect aggregations when numeric strings are sorted alphabetically.")
+        fix    = (f"1. Run: SELECT DISTINCT typeof({col}) FROM {table} (SQLite) or check pg_typeof()  "
+                  f"2. Identify which records have the wrong type.  "
+                  f"3. Cast or clean at source — enforce a single type at ingestion.  "
+                  f"4. Add schema validation (e.g. Great Expectations, dbt tests) to catch future regressions.")
+        effort = "High"
+
+    elif flag == "LOW_UNIQUENESS":
+        desc   = (f"Column {col_ref} has very low uniqueness ({unique_ratio}% unique values) — "
+                  f"behaves like a near-constant or low-cardinality field")
+        impact = ("Low-uniqueness columns add little analytical value and may indicate data truncation, "
+                  "incorrect default values, or a poorly normalised schema.")
+        fix    = (f"1. Review value distribution: SELECT {col}, COUNT(*) FROM {table} GROUP BY {col} ORDER BY 2 DESC  "
+                  f"2. If intended (e.g. status flags): document valid values and add an enum constraint.  "
+                  f"3. If unintended: trace back to source system for the default/fallback causing low variance.  "
+                  f"4. Consider normalising into a lookup/reference table.")
+        effort = "Low"
+
+    elif flag == "PATTERN_INCONSISTENCY":
+        desc   = (f"Column {col_ref} has a dominant format pattern but {100 - unique_ratio:.0f}% of values "
+                  f"deviate — likely a mix of valid and malformed entries")
+        impact = ("Pattern inconsistency breaks regex-based validation, email delivery, phone parsing, "
+                  "and any downstream system that expects a consistent format.")
+        fix    = (f"1. Run a regex scan: SELECT * FROM {table} WHERE {col} NOT LIKE '[expected pattern]'  "
+                  f"2. Identify the dominant pattern (email, phone, ID format) and document it.  "
+                  f"3. Add a format validator at the ingestion layer.  "
+                  f"4. Clean existing non-conforming values or flag them with a 'format_valid' boolean column.")
+        effort = "Medium"
+
+    elif flag == "DUPLICATE_ROWS_DETECTED":
+        desc   = f"Exact duplicate rows detected in table '{table}'"
+        impact = ("Duplicates inflate record counts, corrupt SUM/COUNT metrics, and cause fan-out "
+                  "in joins — downstream reports will overcount. Especially critical for fact tables.")
+        fix    = (f"1. Run: SELECT *, COUNT(*) FROM {table} GROUP BY [all columns] HAVING COUNT(*) > 1  "
+                  f"2. Determine deduplication key (natural key or surrogate).  "
+                  f"3. Add a UNIQUE constraint or PRIMARY KEY at source.  "
+                  f"4. Use DISTINCT or ROW_NUMBER() deduplication in your ETL before loading.")
+        effort = "Medium"
+
+    else:
+        desc   = f"Issue '{flag}' detected in {col_ref}"
+        impact = "Data quality concern that may affect downstream analysis accuracy."
+        fix    = f"Investigate column {col_ref} for the flagged condition and apply appropriate data cleaning."
+        effort = "Medium"
+
+    return desc, impact, fix, effort
+
+
 def _generate_outputs(tables, raw_metadata, enriched, out_dir) -> List[str]:
     os.makedirs(out_dir, exist_ok=True)
     created: List[str] = []
@@ -513,74 +610,371 @@ def _generate_outputs(tables, raw_metadata, enriched, out_dir) -> List[str]:
         inner = tbl_meta.get("table_metadata", tbl_meta)
         attrs = inner.get("attributes", {})
 
-        meta_rows = [{
-            "Table": tname, "Attribute": a,
-            "Data_Type": info.get("data_type", "unknown"),
-            "Null_Pct": round(info.get("null_percentage", 0), 1),
-            "Unique_Ratio": round(info.get("unique_ratio", 0), 3),
-            "Quality_Score": round(info.get("quality_score", 0), 1),
-            "Anomalies": ", ".join(info.get("anomaly_flags", [])) or "None",
-        } for a, info in attrs.items() if isinstance(info, dict)]
-        if meta_rows: excel_sheets[_safe("Meta_", tname)] = pd.DataFrame(meta_rows)
+        total_records = inner.get("dataset_info", {}).get("total_records", len(rows))
+        table_score   = round(inner.get("data_quality_score", 0), 1)
 
-        qual_rows = [{
-            "Table": tname, "Attribute": a,
-            "Quality_Score": round(info.get("quality_score", 0), 1),
-            "Null_Penalty": round(min(info.get("null_percentage", 0) * 0.5, 30), 1),
-            "Anomaly_Count": len(info.get("anomaly_flags", [])),
-            "Status": ("Excellent" if info.get("quality_score", 0) >= 90 else
-                       "Good" if info.get("quality_score", 0) >= 80 else
-                       "Warning" if info.get("quality_score", 0) >= 60 else "Critical"),
-        } for a, info in attrs.items() if isinstance(info, dict)]
-        if qual_rows: excel_sheets[_safe("Quality_", tname)] = pd.DataFrame(qual_rows)
+        # ── Meta sheet — full attribute profile ───────────────────────────────
+        meta_rows = []
+        for a, info in attrs.items():
+            if not isinstance(info, dict):
+                continue
+            dtype     = info.get("data_type", "unknown")
+            present   = info.get("present_count", 0)
+            missing   = info.get("null_count", 0)
+            miss_pct  = info.get("null_percentage", 0.0)
+            unique_v  = info.get("unique_count", 0)
+            unique_r  = round(info.get("unique_ratio", 0), 3)
+            qscore    = f"{round(info.get('quality_score', 0))}/100"
+            flags     = info.get("anomaly_flags", [])
+            outliers  = info.get("outliers", {})
+            patterns  = info.get("pattern_analysis", {}).get("regex_patterns", {})
 
-    # Summary sheet
+            # Recognised patterns (any pattern with > 0 match)
+            recog = [p for p, v in patterns.items()
+                     if isinstance(v, dict) and v.get("matches", 0) > 0]
+            recog_str = ", ".join(recog) if recog else None
+
+            # Most common values (string / categorical)
+            common_vals = info.get("common_values", {})
+            common_str = str(list(common_vals.keys())[:5]) if common_vals else None
+
+            # Character distribution (strings)
+            charset = info.get("charset_analysis", {})
+            char_dist = None
+            if charset:
+                parts = []
+                if charset.get("alphabetic", 0):
+                    parts.append(f"Alpha: {charset['alphabetic']:.1f}%")
+                if charset.get("numeric", 0):
+                    parts.append(f"Numeric: {charset['numeric']:.1f}%")
+                if charset.get("special_chars", 0):
+                    parts.append(f"Special: {charset['special_chars']:.1f}%")
+                char_dist = ", ".join(parts) if parts else None
+
+            row = {
+                "Table_Name":            tname,
+                "Attribute_Name":        a,
+                "Data_Type":             dtype,
+                "Total_Records":         total_records,
+                "Present_Count":         present,
+                "Missing_Count":         missing,
+                "Missing_Percentage":    f"{miss_pct:.1f}%",
+                "Unique_Values":         unique_v,
+                "Unique_Ratio":          unique_r,
+                "Quality_Score":         qscore,
+                # String-specific
+                "Min_Length":            info.get("min_length") if dtype == "string" else None,
+                "Max_Length":            info.get("max_length") if dtype == "string" else None,
+                "Avg_Length":            round(info.get("avg_length", 0), 2) if dtype == "string" else None,
+                "Median_Length":         info.get("median_length") if dtype == "string" else None,
+                "Most_Common_Values":    common_str,
+                "Character_Distribution":char_dist,
+                "Anomaly_Count":         len(flags),
+                "Anomaly_Types":         ", ".join(flags) if flags else None,
+                "Has_Outliers":          "Yes" if outliers.get("count", 0) > 0 else "No",
+                "Recognized_Patterns":   recog_str,
+                # Numeric-specific
+                "Min_Value":             info.get("min_value") if dtype in ("integer", "float") else None,
+                "Max_Value":             info.get("max_value") if dtype in ("integer", "float") else None,
+                "Mean_Value":            round(info.get("mean", 0), 4) if dtype in ("integer", "float") else None,
+                "Median_Value":          info.get("median") if dtype in ("integer", "float") else None,
+                "Std_Deviation":         round(info.get("std", 0), 4) if dtype in ("integer", "float") else None,
+                "Outliers_Count":        outliers.get("count", 0) if dtype in ("integer", "float") else None,
+                # Boolean-specific
+                "True_Count":            info.get("true_count") if dtype == "boolean" else None,
+                "False_Count":           info.get("false_count") if dtype == "boolean" else None,
+                "True_Percentage":       f"{info.get('true_percentage', 0):.1f}%" if dtype == "boolean" else None,
+                "False_Percentage":      f"{info.get('false_percentage', 0):.1f}%" if dtype == "boolean" else None,
+            }
+            meta_rows.append(row)
+        if meta_rows:
+            excel_sheets[_safe("Meta_", tname)] = pd.DataFrame(meta_rows)
+
+        # ── Quality sheet — long format, one metric row per attribute ─────────
+        def _qs_status(score):
+            if score >= 90: return "Excellent"
+            if score >= 80: return "Good"
+            if score >= 60: return "Warning"
+            return "Critical"
+
+        qual_rows = []
+        # Table-level header rows
+        qual_rows.append({
+            "Table_Name":      tname,
+            "Quality_Category":"Overall",
+            "Metric_Name":     "Table Quality Score",
+            "Metric_Value":    f"{table_score}/100",
+            "Status":          _qs_status(table_score),
+            "Description":     "Overall data quality assessment across all attributes",
+        })
+        qual_rows.append({
+            "Table_Name":      tname,
+            "Quality_Category":"Structure",
+            "Metric_Name":     "Total Attributes",
+            "Metric_Value":    len(attrs),
+            "Status":          "Info",
+            "Description":     "Number of columns/attributes in the table",
+        })
+        qual_rows.append({
+            "Table_Name":      tname,
+            "Quality_Category":"Volume",
+            "Metric_Name":     "Total Records",
+            "Metric_Value":    total_records,
+            "Status":          "Info",
+            "Description":     "Number of rows/records in the table",
+        })
+        # Per-attribute rows
+        for a, info in attrs.items():
+            if not isinstance(info, dict):
+                continue
+            ascore     = round(info.get("quality_score", 0), 1)
+            null_pct   = info.get("null_percentage", 0.0)
+            unique_r   = round(info.get("unique_ratio", 0), 3)
+            a_flags    = info.get("anomaly_flags", [])
+            outlier_ct = info.get("outliers", {}).get("count", 0)
+
+            qual_rows.append({
+                "Table_Name":      tname,
+                "Quality_Category":"Attribute Quality",
+                "Metric_Name":     f"{a} - Overall Quality",
+                "Metric_Value":    f"{round(ascore)}/100",
+                "Status":          _qs_status(ascore),
+                "Description":     f"Overall quality score for {a} attribute",
+            })
+            qual_rows.append({
+                "Table_Name":      tname,
+                "Quality_Category":"Uniqueness",
+                "Metric_Name":     f"{a} - Unique Ratio",
+                "Metric_Value":    unique_r,
+                "Status":          "Good" if unique_r > 0.9 else ("Warning" if unique_r > 0.5 else "Info"),
+                "Description":     f"Ratio of unique values in {a} (1.0 = all unique)",
+            })
+            qual_rows.append({
+                "Table_Name":      tname,
+                "Quality_Category":"Completeness",
+                "Metric_Name":     f"{a} - Missing %",
+                "Metric_Value":    f"{null_pct:.1f}%",
+                "Status":          "Excellent" if null_pct == 0 else ("Warning" if null_pct < 10 else "Critical"),
+                "Description":     f"Percentage of missing/null values in {a}",
+            })
+            if a_flags:
+                qual_rows.append({
+                    "Table_Name":      tname,
+                    "Quality_Category":"Anomalies",
+                    "Metric_Name":     f"{a} - Anomaly Types",
+                    "Metric_Value":    ", ".join(a_flags),
+                    "Status":          "Critical" if len(a_flags) > 2 else "Warning",
+                    "Description":     f"Detected anomaly types in {a}",
+                })
+            if outlier_ct > 0:
+                qual_rows.append({
+                    "Table_Name":      tname,
+                    "Quality_Category":"Outliers",
+                    "Metric_Name":     f"{a} - Outlier Count",
+                    "Metric_Value":    outlier_ct,
+                    "Status":          "Warning",
+                    "Description":     f"Statistical outliers detected in {a}",
+                })
+        if qual_rows:
+            excel_sheets[_safe("Quality_", tname)] = pd.DataFrame(qual_rows)
+
     pi = enriched.get("pipeline_info", {})
     llm_ins = enriched.get("llm_insights", {}) or {}
     qs = _extract_quality_scores(raw_metadata.get("tables", {}))
     avg_q = round(sum(qs.values()) / max(len(qs), 1), 1)
-    summary_rows = [
-        {"Metric": "Total Tables",          "Value": str(len(tables))},
-        {"Metric": "Total Records",         "Value": str(pi.get("total_records", 0))},
-        {"Metric": "Avg Quality Score",     "Value": f"{avg_q}/100"},
-        {"Metric": "LLM Grade",             "Value": llm_ins.get("overall_assessment", {}).get("quality_grade", "N/A")},
-        {"Metric": "LLM Used",              "Value": str(pi.get("llm_used", False))},
-        {"Metric": "Processing Time",       "Value": f"{pi.get('total_duration', 0):.1f}s"},
+    oa = llm_ins.get("overall_assessment", {})
+
+    # ── 00_Summary — one row per table overview ────────────────────────────
+    tbl_summaries = raw_metadata.get("dataset_overview", {}).get("table_summaries", {})
+    summary_overview = []
+    for tname in tables:
+        tmeta = raw_metadata.get("tables", {}).get(tname, {})
+        inner = tmeta.get("table_metadata", tmeta)
+        attrs = inner.get("attributes", {})
+        anomaly_cols = [col for col, info in attrs.items()
+                        if isinstance(info, dict) and info.get("anomaly_flags")]
+        summary_overview.append({
+            "Table": tname,
+            "Records": len(tables[tname]),
+            "Columns": len(attrs),
+            "Quality_Score": round(qs.get(tname, 0), 1),
+            "Anomaly_Columns": len(anomaly_cols),
+            "Top_Issues": "; ".join(inner.get("top_issues", [])[:3]) or "None",
+        })
+    pipeline_meta_rows = [
+        {"Table": "— PIPELINE SUMMARY —", "Records": "", "Columns": "",
+         "Quality_Score": avg_q, "Anomaly_Columns": sum(r["Anomaly_Columns"] for r in summary_overview),
+         "Top_Issues": f"LLM Grade: {oa.get('quality_grade','N/A')} | "
+                       f"Readiness: {oa.get('production_readiness','N/A')} | "
+                       f"Duration: {pi.get('total_duration',0):.1f}s"},
     ]
-    excel_sheets["00_Overall_Summary"] = pd.DataFrame(summary_rows)
+    excel_sheets["00_Summary"] = pd.DataFrame(pipeline_meta_rows + summary_overview)
 
-    # Issues sheet
-    issues_rows = []
-    for rec in (llm_ins.get("critical_issues") or [])[:15]:
-        if isinstance(rec, dict):
-            issues_rows.append({"Severity": rec.get("severity", ""), "Table": rec.get("table", "All"),
-                                "Issue": rec.get("issue", ""), "Fix": rec.get("specific_fix", "")})
-    for rec in (llm_ins.get("recommendations") or [])[:10]:
-        if isinstance(rec, dict):
-            issues_rows.append({"Severity": rec.get("priority", ""), "Table": "All",
-                                "Issue": rec.get("category", ""), "Fix": rec.get("action", "")})
-    if issues_rows: excel_sheets["99_Issues_Recommendations"] = pd.DataFrame(issues_rows)
+    # ── 01_LLM_Assessment — full LLM output in table form ─────────────────
+    if oa:
+        assess_rows = [
+            {"Field": "Quality Grade",        "Value": oa.get("quality_grade", "N/A")},
+            {"Field": "Overall Score",        "Value": oa.get("overall_score", "N/A")},
+            {"Field": "Production Readiness", "Value": oa.get("production_readiness", "N/A")},
+            {"Field": "Risk Level",           "Value": llm_ins.get("risk_assessment", {}).get("overall_risk_level", "N/A")},
+            {"Field": "Model Used",           "Value": llm_ins.get("enrichment_metadata", {}).get("model_used", "N/A")},
+            {"Field": "Analysis Timestamp",   "Value": llm_ins.get("enrichment_metadata", {}).get("timestamp", "N/A")},
+            {"Field": "— Key Strengths —",    "Value": ""},
+        ]
+        for s in (oa.get("key_strengths") or []):
+            assess_rows.append({"Field": "Strength", "Value": str(s)})
+        assess_rows.append({"Field": "— Primary Concerns —", "Value": ""})
+        for c in (oa.get("primary_concerns") or []):
+            assess_rows.append({"Field": "Concern", "Value": str(c)})
+        excel_sheets["01_LLM_Assessment"] = pd.DataFrame(assess_rows)
 
-    # Write Excel
+    # ── 02_LLM_Recommendations — prioritised action list ──────────────────
+    rec_rows = []
+    for rec in (llm_ins.get("critical_issues") or []):
+        if isinstance(rec, dict):
+            rec_rows.append({
+                "Priority": "CRITICAL", "Type": "Issue",
+                "Table": rec.get("table", "All"),
+                "Description": rec.get("issue", ""),
+                "Action": rec.get("specific_fix", ""),
+                "Effort": "",
+            })
+    for rec in (llm_ins.get("recommendations") or []):
+        if isinstance(rec, dict):
+            rec_rows.append({
+                "Priority": rec.get("priority", ""),
+                "Type": "Recommendation",
+                "Table": "All",
+                "Description": rec.get("category", ""),
+                "Action": rec.get("action", ""),
+                "Effort": rec.get("estimated_effort", ""),
+            })
+    if rec_rows:
+        excel_sheets["02_LLM_Recommendations"] = pd.DataFrame(rec_rows)
+
+    # ── 99_Issues_Recommendations — rich, actionable combined sheet ─────────
+    combined_rows = []
+
+    # Section 1: Step 1 column-level anomalies with human descriptions + fixes
+    for tname, _rows in tables.items():
+        tmeta = raw_metadata.get("tables", {}).get(tname, {})
+        inner = tmeta.get("table_metadata", tmeta)
+        rec_count = len(_rows)
+        for col, info in inner.get("attributes", {}).items():
+            if not isinstance(info, dict) or not info.get("anomaly_flags"):
+                continue
+            q_score = info.get("quality_score", 100)
+            null_pct = round(info.get("null_percentage", 0), 1)
+            dtype = info.get("data_type", "unknown")
+            mn = info.get("min_value", "")
+            mx = info.get("max_value", "")
+            unique_ratio = round(info.get("unique_ratio", 1) * 100, 1)
+            priority = "CRITICAL" if q_score < 40 else "HIGH" if q_score < 70 else "MEDIUM"
+
+            for flag in info["anomaly_flags"]:
+                desc, impact, fix, effort = _describe_issue(
+                    flag, col, tname, dtype, null_pct, mn, mx, unique_ratio, rec_count
+                )
+                combined_rows.append({
+                    "Priority":           priority,
+                    "Source":             "Automated Analysis",
+                    "Table":              tname,
+                    "Column":             col,
+                    "Issue_Type":         flag,
+                    "Column_Quality":     f"{q_score}/100",
+                    "Description":        desc,
+                    "Business_Impact":    impact,
+                    "Recommended_Fix":    fix,
+                    "Effort":             effort,
+                    "Stats":              f"null={null_pct}% | unique={unique_ratio}% | min={mn} | max={mx}",
+                })
+
+    # Section 2: LLM critical issues (only when LLM was used)
+    for rec in (llm_ins.get("critical_issues") or []):
+        if isinstance(rec, dict):
+            combined_rows.append({
+                "Priority":        rec.get("severity", "HIGH"),
+                "Source":          "LLM Analysis",
+                "Table":           rec.get("table", "All"),
+                "Column":          rec.get("column", ""),
+                "Issue_Type":      "LLM_Critical_Issue",
+                "Column_Quality":  "",
+                "Description":     rec.get("issue", ""),
+                "Business_Impact": rec.get("business_impact", "Data reliability risk identified by AI review"),
+                "Recommended_Fix": rec.get("specific_fix", ""),
+                "Effort":          rec.get("effort", "Medium"),
+                "Stats":           "",
+            })
+
+    # Section 3: LLM recommendations (only when LLM was used)
+    for rec in (llm_ins.get("recommendations") or []):
+        if isinstance(rec, dict):
+            combined_rows.append({
+                "Priority":        rec.get("priority", "MEDIUM"),
+                "Source":          "LLM Analysis",
+                "Table":           "All Tables",
+                "Column":          "",
+                "Issue_Type":      "LLM_Recommendation",
+                "Column_Quality":  "",
+                "Description":     f"[{rec.get('category', '')}] {rec.get('action', '')}",
+                "Business_Impact": "Process or quality improvement identified by AI",
+                "Recommended_Fix": rec.get("action", ""),
+                "Effort":          rec.get("estimated_effort", ""),
+                "Stats":           "",
+            })
+
+    if combined_rows:
+        # Sort: CRITICAL first, then HIGH, MEDIUM, LOW; within same priority sort by table
+        _priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+        combined_rows.sort(key=lambda r: (
+            _priority_order.get(r["Priority"], 9), r["Table"], r["Column"]
+        ))
+        excel_sheets["99_Issues_Recommendations"] = pd.DataFrame(combined_rows)
+
+    # ── Write Excel — grouped per table: Data → Meta → Quality ────────────
     excel_path = os.path.join(out_dir, "complete_data_analysis.xlsx")
     try:
-        order = ["00_Overall_Summary"]
-        order += sorted(s for s in excel_sheets if s.startswith(("Data_", "Meta_", "Quality_")))
+        # Build ordered sheet list: overview sheets first, then per-table groups
+        order = ["00_Summary"]
+        if "01_LLM_Assessment" in excel_sheets:    order.append("01_LLM_Assessment")
+        if "02_LLM_Recommendations" in excel_sheets: order.append("02_LLM_Recommendations")
+
+        # Group Data/Meta/Quality by table in table order
+        for tname in tables:
+            for prefix in ("Data_", "Meta_", "Quality_"):
+                key = _safe(prefix, tname)  # reuse same _safe function
+                # find the actual key that was used (safe name may differ)
+                for k in excel_sheets:
+                    if k.startswith(prefix) and tname[:min(len(tname), 20)] in k:
+                        if k not in order:
+                            order.append(k)
+                        break
+
         if "99_Issues_Recommendations" in excel_sheets: order.append("99_Issues_Recommendations")
+
+        # Catch any sheet not yet in order
+        for k in excel_sheets:
+            if k not in order:
+                order.append(k)
+
         with pd.ExcelWriter(excel_path, engine="openpyxl") as w:
             for sn in order:
-                if sn in excel_sheets: excel_sheets[sn].to_excel(w, sheet_name=sn, index=False)
+                if sn in excel_sheets:
+                    excel_sheets[sn].to_excel(w, sheet_name=sn, index=False)
         created.append(excel_path)
-        print(f"  Excel ({len(excel_sheets)} sheets) → {excel_path}")
+        print(f"  Excel ({len(order)} sheets) → {excel_path}")
     except Exception as exc:
         logger.warning("Excel generation failed: %s", exc)
 
+    # ── CSV summaries ──────────────────────────────────────────────────────
     sum_path = os.path.join(out_dir, "overall_dataset_summary.csv")
-    excel_sheets["00_Overall_Summary"].to_csv(sum_path, index=False); created.append(sum_path)
+    excel_sheets["00_Summary"].to_csv(sum_path, index=False)
+    created.append(sum_path)
 
     if "99_Issues_Recommendations" in excel_sheets:
         iss_path = os.path.join(out_dir, "combined_issues_and_recommendations.csv")
-        excel_sheets["99_Issues_Recommendations"].to_csv(iss_path, index=False); created.append(iss_path)
+        excel_sheets["99_Issues_Recommendations"].to_csv(iss_path, index=False)
+        created.append(iss_path)
 
     return created
 

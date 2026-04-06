@@ -25,8 +25,12 @@ class StatisticalUtils:
         
         np_values = np.array([float(v) for v in values])
         
-        # Z-score method
-        z_scores = np.abs(stats.zscore(np_values))
+        # Z-score method — suppress RuntimeWarning when all values are identical (std=0)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            z_scores = np.abs(stats.zscore(np_values))
+        z_scores = np.nan_to_num(z_scores, nan=0.0)
         z_outliers = np.where(z_scores > self.z_score_threshold)[0]
         
         # IQR method

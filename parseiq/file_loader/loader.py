@@ -44,6 +44,14 @@ class FileLoader:
             data = self._load_json(file_path)
             # Flatten nested JSON into multiple tables
             flattened_data = self._flatten_nested_json(data)
+            # Rename 'main_table' (used when root is an unnamed list) to the
+            # filename stem so users see e.g. "input_data" instead of "main_table"
+            stem = file_path.stem
+            if 'main_table' in flattened_data and stem and stem != 'main_table':
+                flattened_data[stem] = flattened_data.pop('main_table')
+                path_key = '__path__main_table'
+                if path_key in flattened_data:
+                    flattened_data[f'__path__{stem}'] = flattened_data.pop(path_key)
             return flattened_data
         elif file_extension == '.csv':
             return self._load_csv(file_path)
