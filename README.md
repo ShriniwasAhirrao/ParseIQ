@@ -1,31 +1,260 @@
-# ParseIQ — AI-Powered Data Quality & Metadata Agent
+# ParseIQ — AI-Powered Data Quality Agent
 
 > Understand your data before you trust it.
 
-ParseIQ is an AI data agent that takes raw files (JSON, CSV, XML, Excel) and produces a full data quality report — anomaly flags, statistical profiling, per-table metadata, and LLM-generated recommendations — all in a structured Excel workbook and a set of CSVs.
+ParseIQ is a Python library and CLI tool that analyses any data file (JSON, CSV, XML, Excel) and produces a full data quality report — statistical profiling, anomaly detection, per-table quality scores, and optional AI-generated recommendations — all in a structured Excel workbook and a set of CSVs.
 
-It is designed for the **data onboarding / data discovery phase**: when you receive a data dump and need to know what's in it, whether it's usable, and what to fix before loading it into production.
+Built for the **data onboarding and discovery phase**: when you receive a data dump and need to know what's in it, whether it's usable, and what to fix before loading it into production.
+
+---
+
+## Quickstart
+
+```bash
+pip install parseiq
+
+parseiq init                              # first-time setup (API key, model)
+parseiq analyze data.json --no-llm       # local mode — no API key needed
+parseiq analyze data.json                # with AI enrichment (needs API key)
+```
+
+That's it. Results appear in `output/` as an Excel workbook + CSV summaries.
 
 ---
 
 ## What It Does
 
 ```
-Input file (JSON / CSV / XML / Excel)
-         ↓
- Step 1 — Metadata Extractor
-   • Flatten deeply nested JSON (any depth)
-   • Detect table structure, data types, statistics
-   • Flag 8 anomaly types per column
-   • Score every table 0–100
-         ↓
- Step 2 — LLM Enricher  (BYOK via OpenRouter)
-   • Business-level interpretation of quality issues
-   • Cross-table relationship insights
-   • Prioritised action recommendations
-         ↓
- Output — Excel workbook + CSV summary files
+Input file  (JSON / CSV / XML / Excel)
+         |
+         v
+ Step 1 — Metadata Extractor  (always runs, no API key needed)
+   * Flatten deeply nested JSON into multiple tables automatically
+   * Detect data types, compute statistics (min/max/mean/percentiles)
+   * Flag 8 anomaly types per column
+   * Score every table 0-100
+         |
+         v
+ Step 2 — LLM Enricher  (optional, BYOK)
+   * Business-level interpretation of quality issues
+   * Cross-table relationship insights
+   * Prioritised recommendations with effort estimates
+         |
+         v
+ Output — Excel workbook  +  CSV summaries  +  JSON metadata files
 ```
+
+---
+
+## Installation
+
+```bash
+pip install parseiq
+```
+
+**With optional extras:**
+
+```bash
+pip install parseiq[all]       # includes dotenv, boto3, psycopg2, pymongo
+pip install parseiq[s3]        # S3 connector only
+pip install parseiq[postgres]  # PostgreSQL connector only
+pip install parseiq[mongodb]   # MongoDB connector only
+```
+
+**From source:**
+
+```bash
+git clone https://github.com/ShriniwasAhirrao/ParseIQ-V0.0.1.git
+cd ParseIQ-V0.0.1
+pip install -e .
+```
+
+Requires Python 3.9+.
+
+---
+
+## CLI Usage
+
+### First-time setup
+
+```bash
+parseiq init
+```
+
+Interactive wizard that asks for your API key, lets you pick a model, tests the connection, and saves everything to `.env`. Run this once.
+
+### Analyse a file
+
+```bash
+# Local mode — no API key, always works, instant
+parseiq analyze data.json --no-llm
+
+# With AI enrichment (free OpenRouter account works)
+parseiq analyze data.json
+
+# CSV, XML, or Excel — same command
+parseiq analyze export.csv --no-llm
+parseiq analyze report.xlsx --no-llm
+
+# Custom output folder
+parseiq analyze data.json --no-llm --output reports/june/
+
+# Force reprocess (ignore incremental cache)
+parseiq analyze data.json --no-llm --force
+
+# Quiet mode for scripts / CI
+parseiq analyze data.json --no-llm --quiet
+
+# CI quality gate — exit code 1 if avg quality below 80
+parseiq analyze data.json --no-llm --fail-under 80
+```
+
+### Other commands
+
+```bash
+parseiq validate data.json     # quick file check — tables, columns, record count
+parseiq models                 # list available LLM models (free, paid, local)
+parseiq config                 # show current settings and API key status
+parseiq version                # print version
+```
+
+### LLM providers
+
+```bash
+# OpenRouter (default) — free models available
+parseiq analyze data.json --llm-provider openrouter --llm-model nvidia/nemotron-3-super-120b-a12b:free
+
+# OpenAI
+parseiq analyze data.json --llm-provider openai --llm-model gpt-4o --llm-api-key sk-...
+
+# Local Ollama — no API key, no cost, no data leaves machine
+parseiq analyze data.json --llm-provider ollama --llm-model llama3
+
+# Pass key directly without setting env var
+parseiq analyze data.json --llm-api-key sk-or-v1-your-key-here
+```
+
+---
+
+## Python API
+
+```python
+from parseiq import Pipeline
+
+# Local mode — no API key needed
+result = Pipeline("data.json").run(llm=False)
+
+# With LLM
+result = Pipeline("data.json").run(
+    llm=True,
+    llm_provider="openrouter",
+    llm_api_key="sk-or-v1-...",
+    llm_model="nvidia/nemotron-3-super-120b-a12b:free",
+)
+
+# Works with CSV, XML, Excel too
+result = Pipeline("export.csv").run(llm=False)
+result = Pipeline("report.xlsx").run(llm=False)
+
+# Check results
+print(result.tables)                # ["employees", "departments", ...]
+print(result.quality_scores)        # {"employees": 37.6, "departments": 93.3}
+print(result.overall_quality_score) # 72.4
+print(result.total_anomalies)       # 48
+print(result.llm_grade)             # "B" or None (local mode)
+print(result.output_files)          # list of file paths written
+```
+
+### Class-method constructors
+
+```python
+# Load from different sources
+Pipeline.from_file("data.json")
+Pipeline.from_url("https://api.example.com/data.json")
+Pipeline.from_s3("s3://my-bucket/data.json")
+Pipeline.from_postgres("postgresql://user:pass@host/db", "SELECT * FROM orders")
+Pipeline.from_mongodb("mongodb://localhost:27017", "customers")
+```
+
+### Alert rules
+
+```python
+from parseiq.alerts import slack_webhook
+
+result = Pipeline("data.json").run(
+    llm=False,
+    alert_rules={
+        "employees.salary": {"negative_values": True},
+        "employees.email":  {"null_rate_gt": 0.05},
+        "orders":           {"quality_score_lt": 70},
+    },
+    on_alert=slack_webhook("https://hooks.slack.com/services/..."),
+)
+
+print(result.alerts_fired)  # list of matched rules
+```
+
+### Incremental processing
+
+```python
+# First run — analyses all 14 tables
+result = Pipeline("data.json").run(llm=False)
+
+# Second run — skips unchanged tables (uses hash cache)
+result = Pipeline("data.json").run(llm=False)
+
+# Force full reprocess
+result = Pipeline("data.json").run(llm=False, force=True)
+```
+
+---
+
+## Output Files
+
+Every run produces these files in the output directory:
+
+| File | Contents |
+|---|---|
+| `complete_data_analysis.xlsx` | Master workbook — Data / Metadata / Quality sheets per table + 2 summary tabs |
+| `overall_dataset_summary.csv` | One row per table: records, quality score, anomaly count |
+| `combined_issues_and_recommendations.csv` | All flagged issues with recommended fixes |
+| `raw_metadata.json` | Full Step 1 technical metadata |
+| `enriched_metadata.json` | Step 1 + LLM insights merged |
+| `llm_insights.json` | Raw LLM response (only when LLM is enabled) |
+
+### Excel workbook structure
+
+```
+complete_data_analysis.xlsx
+├── 00_Overall_Summary          <- dataset-wide quality metrics
+├── 99_Issues_Recommendations   <- all issues with recommended actions
+├── Data_employees              <- raw data rows for the employees table
+├── Meta_employees              <- column metadata: type, nulls, stats, anomaly flags
+├── Quality_employees           <- quality score breakdown per column
+├── Data_departments
+├── Meta_departments
+├── Quality_departments
+└── ... (3 sheets per table discovered)
+```
+
+---
+
+## Anomaly Detection
+
+ParseIQ flags 8 types of data quality issues at the column level:
+
+| Flag | Triggered when |
+|---|---|
+| `HIGH_NULL_RATE` | More than 30% of values are null |
+| `LOW_UNIQUENESS` | Unique ratio below 10% with more than 10 rows (booleans exempt) |
+| `MIXED_DATA_TYPES` | Column contains incompatible types (e.g. integers mixed with strings) |
+| `FUTURE_DATE_DETECTED` | ISO date string is beyond today's date |
+| `NUMERIC_OUTLIERS_DETECTED` | Z-score or IQR outlier found in a numeric column |
+| `NEGATIVE_VALUES_DETECTED` | Numeric column contains negative values |
+| `PATTERN_INCONSISTENCY` | Dominant pattern exists (e.g. email format) but 10–50% of values don't match |
+| `DUPLICATE_ROWS_DETECTED` | Exact duplicate rows found at the table level |
+
+Each flagged column incurs a score penalty. The table quality score (0–100) reflects the overall severity.
 
 ---
 
@@ -33,228 +262,151 @@ Input file (JSON / CSV / XML / Excel)
 
 | Feature | Detail |
 |---|---|
-| **Deep nested JSON flattening** | Recursively discovers all tables in any JSON hierarchy; injects FK columns linking children back to parents |
-| **8 anomaly detectors** | `HIGH_NULL_RATE`, `LOW_UNIQUENESS`, `MIXED_DATA_TYPES`, `FUTURE_DATE_DETECTED`, `NUMERIC_OUTLIERS_DETECTED`, `NEGATIVE_VALUES_DETECTED`, `PATTERN_INCONSISTENCY`, `DUPLICATE_ROWS_DETECTED` |
-| **Per-table quality scores** | Every table and every column is scored 0–100 based on anomaly severity |
-| **Multi-format input** | JSON (including deeply nested), CSV (auto-delimiter detection), XML, Excel `.xlsx` |
-| **BYOK LLM** | Bring your own OpenRouter API key — your data goes to your LLM account, not a third party |
-| **Structured Excel output** | One workbook, separate sheets per table: Data / Metadata / Quality |
-| **159 tests** | Full test suite across all components |
+| **Deep nested JSON flattening** | Recursively discovers all tables in any JSON hierarchy; injects `_ref_<parent>_id` FK columns |
+| **Multi-format input** | JSON (nested), CSV (auto-delimiter), XML, Excel `.xlsx` |
+| **BYOK LLM** | Bring your own key — OpenRouter, OpenAI, Azure, or local Ollama |
+| **Local mode** | `llm=False` — full Step 1 analysis, no API key, data never leaves your machine |
+| **Graceful degradation** | LLM call fails or times out → Step 1 report is still saved, no crash |
+| **Incremental processing** | Hash-based cache — unchanged tables reuse previous results on re-runs |
+| **Alert rules** | Post-analysis rule evaluation with Slack/email callback helpers |
+| **Structured result object** | `PipelineResult` dataclass with quality scores, anomalies, grades |
+| **CLI + Python API** | Use as a command-line tool or import directly into any Python project |
+| **159 tests** | Full pytest suite across all components |
 
 ---
 
-## Output
+## LLM Models
 
-Running ParseIQ on any input file produces **6 files** in the `output/` directory:
+Run `parseiq models` to see the full list. Highlights:
 
-| File | Contents |
-|---|---|
-| `complete_data_analysis.xlsx` | Master workbook — Data, Metadata, and Quality sheets per table + two summary tabs |
-| `overall_dataset_summary.csv` | One row per table: record count, quality score, anomaly count |
-| `combined_issues_and_recommendations.csv` | Prioritised issue list with affected table, category, and recommended action |
-| `raw_metadata.json` | Full technical metadata from Step 1 |
-| `enriched_metadata.json` | Step 1 metadata merged with LLM insights |
-| `llm_insights.json` | Raw LLM response |
+**Free (OpenRouter account, no cost):**
+- `nvidia/nemotron-3-super-120b-a12b:free` — default, strong reasoning
+- `mistralai/mistral-small-3.1-24b-instruct:free` — faster
+- `meta-llama/llama-3.3-70b-instruct:free` — well-rounded
 
-### Excel workbook structure
+**Paid:**
+- `openai/gpt-4o` — best overall quality
+- `openai/gpt-4o-mini` — fast and cheap
 
-```
-complete_data_analysis.xlsx
-├── 00_Overall_Summary          ← dataset-wide quality overview
-├── 01_Issues_Recommendations   ← prioritised issues with affected tables
-├── Data_employees              ← raw data for the employees table
-├── Meta_employees              ← column-level metadata (type, nulls, stats, anomalies)
-├── Quality_employees           ← quality score breakdown per column
-├── Data_departments
-├── Meta_departments
-├── Quality_departments
-└── ... (one set of 3 sheets per table discovered)
-```
+**Local (no API key, no cost):**
+- `llama3`, `mistral`, `phi3` via Ollama
 
 ---
 
-## Getting Started
+## Configuration
 
-### Prerequisites
+Priority order (highest to lowest):
 
-- Python 3.8+
-- An [OpenRouter](https://openrouter.io/) API key (free tier works — the default model is `nvidia/nemotron-3-super-120b-a12b:free`)
-
-### Installation
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/your-username/ParseIQ.git
-cd ParseIQ
-
-# 2. Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Set your API key
-# Option A — environment variable (recommended)
-export OPENROUTER_API_KEY="sk-or-v1-..."   # Windows: set OPENROUTER_API_KEY=sk-or-v1-...
-
-# Option B — .env file in the project root
-echo OPENROUTER_API_KEY="sk-or-v1-..." > .env
-```
-
-### Run
+1. Parameters passed directly to `run()` — `llm_api_key`, `llm_model`, etc.
+2. Environment variables — `OPENROUTER_API_KEY`, `PARSEIQ_MODEL`
+3. `.env` file in project root (auto-loaded)
+4. Built-in defaults
 
 ```bash
-# Place your input file in the input/ directory, then:
-python main.py
+# Set in environment
+export OPENROUTER_API_KEY=sk-or-v1-your-key-here
+export PARSEIQ_MODEL=mistralai/mistral-small-3.1-24b-instruct:free
+
+# Or save to .env file
+echo "OPENROUTER_API_KEY=sk-or-v1-..." >> .env
 ```
 
-Output files appear in `output/`. The terminal prints a live step-by-step progress log.
+Check current config:
+```bash
+parseiq config
+```
 
 ---
 
 ## Project Structure
 
 ```
-ParseIQ/
-├── main.py                          # Pipeline entry point
-├── config.py                        # All configuration (thresholds, LLM settings, file settings)
-├── requirements.txt
+parseiq/
+├── parseiq/                         # Main package
+│   ├── __init__.py                  # Public API: Pipeline, PipelineResult, Config
+│   ├── pipeline.py                  # Pipeline class + MetadataEnrichmentAgent shim
+│   ├── result.py                    # PipelineResult frozen dataclass
+│   ├── config.py                    # Centralised configuration
+│   ├── alerts.py                    # Alert rules engine + Slack/email helpers
+│   ├── _cli.py                      # CLI entry point (parseiq command)
+│   ├── connectors/                  # Data source connectors
+│   │   ├── file.py                  # Local files (JSON, CSV, XML, Excel)
+│   │   ├── url.py                   # HTTP/HTTPS URLs
+│   │   ├── s3.py                    # Amazon S3
+│   │   ├── postgres.py              # PostgreSQL
+│   │   └── mongodb.py               # MongoDB
+│   ├── file_loader/
+│   │   └── loader.py                # Multi-format loader + nested JSON flattener
+│   ├── step1_metadata_extractor/
+│   │   ├── extractor.py             # Metadata extraction, anomaly detection, scoring
+│   │   └── utils.py                 # Statistical helpers
+│   └── step2_llm_enricher/
+│       ├── llm_agent.py             # LLM API client (multi-provider, BYOK)
+│       └── prompt_template.txt      # LLM system prompt
 │
-├── file_loader/
-│   └── loader.py                    # Multi-format loader + nested JSON flattener
+├── examples/                        # Runnable example scripts
+│   ├── from_json_file.py
+│   ├── from_postgres.py
+│   ├── from_s3.py
+│   ├── with_alert_rules.py
+│   └── with_local_llm_ollama.py
 │
-├── step1_metadata_extractor/
-│   ├── extractor.py                 # Metadata extraction, anomaly detection, quality scoring
-│   └── utils.py                     # Statistical helpers
-│
-├── step2_llm_enricher/
-│   ├── llm_agent.py                 # OpenRouter API client + metadata enrichment
-│   └── prompt_template.txt          # LLM system prompt
-│
-├── input/                           # Place your input files here
-│   └── input_data.json              # Example: 4-level nested org dataset (13 tables, 50 records)
-│
-├── output/                          # Generated reports land here (git-ignored)
-│
-├── tests/
-│   ├── test_comprehensive.py        # 109 tests — all components, all branches
-│   ├── test_bug_fixes.py            # 10 targeted bug-fix verification tests
-│   ├── test_config.py
-│   ├── test_file_loader.py
-│   ├── test_metadata_extractor.py
-│   ├── test_llm_enricher.py
-│   ├── test_main.py
-│   ├── test_integration.py
-│   └── test_statistical_utils.py
-│
-└── scripts/
-    └── generate_stress_test.py      # Generates a 14-level, 53k-record stress test dataset
+├── tests/                           # 159 pytest tests
+├── pyproject.toml
+├── commands.md                      # Full CLI command reference
+└── CHANGELOG.md
 ```
-
----
-
-## Anomaly Detection
-
-ParseIQ flags 8 types of data quality anomalies at the column level:
-
-| Flag | Triggered when |
-|---|---|
-| `HIGH_NULL_RATE` | > 30% of values are null |
-| `LOW_UNIQUENESS` | Unique ratio < 10% and > 10 rows (boolean columns exempt) |
-| `MIXED_DATA_TYPES` | Same column contains values of incompatible types (e.g. int + string) |
-| `FUTURE_DATE_DETECTED` | ISO date string is beyond today's date |
-| `NUMERIC_OUTLIERS_DETECTED` | Z-score or IQR outlier found in numeric column |
-| `NEGATIVE_VALUES_DETECTED` | Numeric column contains negative values |
-| `PATTERN_INCONSISTENCY` | Column has a dominant regex pattern but 10–50% of values don't match it |
-| `DUPLICATE_ROWS_DETECTED` | Table-level: exact duplicate rows found |
-
-Each flagged column incurs a quality score penalty. Tables with many issues score lower.
-
----
-
-## Configuration
-
-Edit `config.py` to adjust behaviour without touching pipeline code:
-
-```python
-# Change the LLM model (any OpenRouter model works)
-MODEL_NAME = "nvidia/nemotron-3-super-120b-a12b:free"
-
-# Adjust anomaly sensitivity
-ANOMALY_THRESHOLDS = {
-    'high_null_rate': 30.0,       # % nulls to trigger HIGH_NULL_RATE
-    'min_unique_ratio': 0.1,      # unique ratio to trigger LOW_UNIQUENESS
-    'z_score_threshold': 3.0,     # std deviations for outlier detection
-    'iqr_multiplier': 1.5,        # IQR multiplier for outlier detection
-}
-
-# LLM call settings
-LLM_SETTINGS = {
-    'max_tokens': 4096,
-    'temperature': 0.1,
-    'timeout': 240,
-    'retry_attempts': 3,
-}
-```
-
----
-
-## Supported Input Formats
-
-| Format | Notes |
-|---|---|
-| **JSON** | Any depth of nesting. Sibling arrays with the same name are merged into one table. Child records get a `_ref_<parent>_id` FK column injected automatically. |
-| **CSV** | Auto-detects delimiter (comma, semicolon, tab). Handles encoding detection. Null cells correctly preserved as `None`. |
-| **XML** | Converted via `xmltodict` then processed as JSON. |
-| **Excel** | `.xlsx` files loaded via `openpyxl`. |
 
 ---
 
 ## Running Tests
 
 ```bash
-# Run the full test suite
-pytest tests/ -v
+# Install dev dependencies
+pip install -e ".[dev]"
 
-# Run with coverage report
-pytest tests/ --cov=. --cov-report=term-missing
+# Run full test suite
+pytest
 
-# Run only the bug-fix verification tests
-pytest tests/test_bug_fixes.py -v
+# With coverage report
+pytest --cov=parseiq --cov-report=term-missing
 ```
 
-Current status: **159/159 tests passing**
+Current status: **159/159 passing**
+
+---
+
+## Supported Input Formats
+
+| Format | Extension | Notes |
+|---|---|---|
+| JSON | `.json` | Any nesting depth — all arrays of objects become separate tables automatically |
+| CSV | `.csv` | Auto-detects delimiter (comma, semicolon, tab) and file encoding |
+| XML | `.xml` | Converted via `xmltodict`, then processed as JSON |
+| Excel | `.xlsx` `.xls` | Each sheet becomes a separate table |
 
 ---
 
 ## Limitations (V.0.0.1)
 
-- **File-based input only** — no direct database or cloud storage connectors yet
-- **Single-run, no incremental processing** — re-runs the full analysis each time
-- **Static reports** — no live dashboards or alerting hooks yet
-- **Single-user design** — no concurrency or multi-tenant isolation
-
-These are planned for V.0.1 (Python library + CLI release). See [TODO.md](TODO.md) for the full roadmap.
+- Free-tier OpenRouter: ~10 RPM — one LLM call per run, not per table
+- LLM response time: 2–3 minutes for large datasets on free tier
+- Max file size: 100 MB
+- No live dashboard — output is files only
 
 ---
 
 ## Roadmap
 
-**V.0.1 — Python Library + CLI**
-- `pip install parseiq`
-- `parseiq run mydata.json --output ./reports/ --api-key sk-...`
-- `from parseiq import Pipeline; Pipeline(api_key=...).run("mydata.json")`
-- Configurable LLM provider (OpenAI, Azure, Ollama, OpenRouter)
+**V.0.1.0**
+- PDF report export
+- Batch processing (folder of files in one command)
+- Cross-table FK violation detection (orphaned records)
 
-**V.0.2 — Connectors**
-- `Pipeline.from_postgres(conn_string, table)`
-- `Pipeline.from_s3(bucket, key)`
-- `Pipeline.from_mongodb(uri, collection)`
-
-**V.0.3 — Incremental + Alerting**
-- State file to skip unchanged tables between runs
-- `alert_rules` + `on_alert` callback for integration into existing pipelines
+**V.0.2.0**
+- Web UI — drag-and-drop file upload, results in browser
+- Custom YAML rule definitions (`salary > 0`, `email matches pattern`)
+- Parquet and Google Sheets support
 
 ---
 
@@ -262,15 +414,19 @@ These are planned for V.0.1 (Python library + CLI release). See [TODO.md](TODO.m
 
 | Library | Purpose |
 |---|---|
-| `pandas` | Data manipulation, DataFrame operations |
-| `numpy` / `scipy` | Statistical calculations, outlier detection |
+| `pandas` | Data manipulation and DataFrame operations |
+| `numpy` / `scipy` | Statistical calculations and outlier detection |
 | `openpyxl` | Excel report generation |
-| `requests` | OpenRouter API calls |
+| `requests` | LLM API calls |
 | `xmltodict` | XML parsing |
-| `python-dotenv` | `.env` file support for API key |
-| `chardet` | Character encoding detection for CSV files |
+| `chardet` | Character encoding detection |
 | `python-dateutil` | Date parsing |
-| `pytest` / `pytest-cov` | Testing and coverage |
+
+Optional:
+| `python-dotenv` | `.env` file loading |
+| `boto3` | S3 connector |
+| `psycopg2-binary` | PostgreSQL connector |
+| `pymongo` | MongoDB connector |
 
 ---
 
@@ -282,4 +438,4 @@ MIT
 
 ## Author
 
-Built by [your name] as part of an internship project at Ilink Digital.
+Built by Shriniwas Ahirrao at [Ilink Digital](https://ilinkdigital.com).

@@ -1,0 +1,167 @@
+# Data Quality Analysis — Expert Assessment
+
+You are a senior data quality engineer. Analyse the JSON metadata below and return a **single valid JSON object** — no markdown fences, no extra text.
+
+## Input Metadata
+{metadata_summary}
+
+## Analysis Date
+{current_date}
+
+---
+
+## Tasks (perform ALL)
+
+**1. Overall Quality Assessment**
+Assign a realistic grade (A 90-100 / B 80-89 / C 70-79 / D 60-69 / F <60) using:
+- Completeness 30 % · Validity 25 % · Consistency 25 % · Business-rule compliance 20 %
+Never give a perfect score when issues exist.
+
+**2. Issue Classification** (per table, per field where possible)
+- CRITICAL — data corruption, missing required IDs, referential integrity violations
+- HIGH     — empty required fields, wrong data types, business-rule failures
+- MEDIUM   — format inconsistencies, statistical outliers, optional field gaps
+- LOW      — distribution skews, pattern variations
+
+**3. Business Logic Validation**
+- Numeric fields: amounts/salaries must be positive; IDs must be unique and non-empty
+- Date fields: valid dates, logical sequences (start ≤ end, hire_date < review_date)
+- Email / phone: format compliance
+- Cross-table FK existence (where inferable from field names)
+
+**4. Anomaly Detection**
+Statistical (Z-score > 3, IQR), pattern-based (format violations), and business-logic violations.
+
+**5. Field-Level Scoring**
+For each problematic field: completeness %, validity %, consistency %, business-rule compliance %.
+
+**6. Recommendations**
+Specific, actionable, prioritised (CRITICAL → LOW). Include exact remediation steps.
+
+**7. Risk Assessment**
+Overall risk level, compliance risk, financial / operational impact.
+
+---
+
+## Required JSON Output Schema
+
+Return EXACTLY this structure (populate every field; use null only if genuinely unknown):
+
+```
+{
+  "dataset_overview": {
+    "table_count": <int>,
+    "table_names": [<str>],
+    "dataset_type": "single_table"|"multi_table",
+    "total_records": <int>,
+    "analysis_timestamp": "<ISO8601>"
+  },
+  "overall_assessment": {
+    "quality_grade": "A"|"B"|"C"|"D"|"F",
+    "overall_score": <float 0-100>,
+    "confidence_score": <float 0-100>,
+    "component_scores": {
+      "completeness": <float>,
+      "validity": <float>,
+      "consistency": <float>,
+      "business_rule_compliance": <float>
+    },
+    "production_readiness": "<string>",
+    "key_strengths": [<str>],
+    "primary_concerns": [<str>]
+  },
+  "table_analysis": [
+    {
+      "table_name": "<str>",
+      "record_count": <int>,
+      "table_quality_score": <float>,
+      "completeness_rate": <float>,
+      "validity_rate": <float>,
+      "consistency_rate": <float>,
+      "business_rule_compliance": <float>,
+      "key_issues": [<str>]
+    }
+  ],
+  "cross_table_analysis": {
+    "referential_integrity_score": <float>,
+    "relationship_violations": [],
+    "orphaned_records": [],
+    "schema_evolution_detected": <bool>
+  },
+  "critical_issues": [
+    {
+      "issue": "<str>",
+      "severity": "CRITICAL"|"HIGH"|"MEDIUM"|"LOW",
+      "category": "<str>",
+      "table": "<str>",
+      "description": "<str>",
+      "business_impact": "<str>",
+      "affected_records": [<str>],
+      "affected_records_pct": <float>,
+      "specific_fix": "<str>"
+    }
+  ],
+  "field_analysis": [
+    {
+      "table_name": "<str>",
+      "field_name": "<str>",
+      "quality_score": <float>,
+      "completeness_rate": <float>,
+      "validity_rate": <float>,
+      "business_rule_compliance": <float>,
+      "issues": [<str>],
+      "recommendations": [<str>]
+    }
+  ],
+  "business_rule_violations": [
+    {
+      "rule": "<str>",
+      "table": "<str>",
+      "violation_count": <int>,
+      "suggested_fix": "<str>"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "CRITICAL"|"HIGH"|"MEDIUM"|"LOW",
+      "category": "<str>",
+      "action": "<str>",
+      "rationale": "<str>",
+      "estimated_effort": "Low"|"Medium"|"High",
+      "timeline": "<str>"
+    }
+  ],
+  "risk_assessment": {
+    "overall_risk_level": "LOW"|"MEDIUM"|"HIGH"|"CRITICAL",
+    "data_reliability_risk": "<str>",
+    "compliance_risk": "<str>",
+    "financial_impact": "<str>",
+    "mitigation_urgency": "<str>"
+  },
+  "governance_recommendations": {
+    "data_stewardship": [<str>],
+    "quality_standards": [<str>],
+    "tool_recommendations": [<str>]
+  },
+  "monitoring_suggestions": [
+    {
+      "metric": "<str>",
+      "threshold": "<str>",
+      "frequency": "<str>",
+      "priority": "<str>"
+    }
+  ],
+  "next_steps": {
+    "immediate_actions": [<str>],
+    "short_term_goals": [<str>],
+    "long_term_strategy": [<str>]
+  }
+}
+```
+
+## Critical Instructions
+1. Return ONLY valid JSON — start with `{` end with `}`
+2. Use realistic, evidence-based scores — not arbitrary 100/100
+3. Every issue must reference the specific table and field
+4. Recommendations must be concrete and immediately actionable
+5. For multi-table datasets, assess cross-table relationships

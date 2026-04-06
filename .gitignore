@@ -27,3 +27,16 @@ input/stress_test_data.json
 # Coverage reports
 .coverage
 coverage.xml
+
+# Build artifacts
+build/
+*.egg-info/
+dist/
+
+# Test artefacts
+input/test_sample.csv
+output/csv_test/
+output/wheel_test/
+
+# Test virtual envs
+.test_venv/

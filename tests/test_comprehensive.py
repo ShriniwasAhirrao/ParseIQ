@@ -111,10 +111,10 @@ class TestFileLoaderCSV(unittest.TestCase):
     # ── File size limit ───────────────────────────────────────────────────────
 
     def test_load_file_too_large_raises(self):
-        with patch('file_loader.loader.Path.exists', return_value=True):
+        with patch('parseiq.file_loader.loader.Path.exists', return_value=True):
             mock_stat = MagicMock()
             mock_stat.st_size = 200 * 1024 * 1024  # 200 MB
-            with patch('file_loader.loader.Path.stat', return_value=mock_stat):
+            with patch('parseiq.file_loader.loader.Path.stat', return_value=mock_stat):
                 with self.assertRaises(ValueError) as ctx:
                     self.loader.load_file('big.json')
                 self.assertIn('too large', str(ctx.exception).lower())

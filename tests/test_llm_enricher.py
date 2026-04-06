@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from step2_llm_enricher.llm_agent import LLMEnricher
+from parseiq.step2_llm_enricher.llm_agent import LLMEnricher
+from parseiq.config import Config
+
 
 class TestLLMEnricher(unittest.TestCase):
     def setUp(self):
@@ -11,11 +13,11 @@ class TestLLMEnricher(unittest.TestCase):
             'max_tokens': 1000,
             'temperature': 0.5,
             'debug': False,
-            'prompt_template_path': 'step2_llm_enricher/prompt_template.txt'
+            'prompt_template_path': Config.create_prompt_template_path(),
         }
         self.enricher = LLMEnricher(config)
 
-    @patch('step2_llm_enricher.llm_agent.open', create=True)
+    @patch('parseiq.step2_llm_enricher.llm_agent.open', create=True)
     def test_load_prompt_template_success(self, mock_open):
         mock_open.return_value.__enter__.return_value.read.return_value = "Prompt {metadata_summary}"
         prompt = self.enricher._load_prompt_template()
@@ -30,9 +32,10 @@ class TestLLMEnricher(unittest.TestCase):
         self.assertIsNotNone(date)
         self.assertEqual(str(date), "2023-01-01")
 
-    @patch('step2_llm_enricher.llm_agent.requests.post')
+    @patch('parseiq.step2_llm_enricher.llm_agent.requests.post')
     def test_make_api_request_success(self, mock_post):
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             'choices': [{'message': {'content': '{"status":"ok"}'}}]
         }
@@ -45,6 +48,7 @@ class TestLLMEnricher(unittest.TestCase):
     def test_test_connection_success(self):
         with patch.object(self.enricher, '_make_api_request', return_value='{"status": "ok", "test": true}'):
             self.assertTrue(self.enricher.test_connection())
+
 
 if __name__ == "__main__":
     unittest.main()

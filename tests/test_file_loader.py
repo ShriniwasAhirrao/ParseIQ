@@ -13,21 +13,21 @@ class TestFileLoader(unittest.TestCase):
         self.assertIn('.xml', self.loader.supported_formats)
         self.assertIn('.xlsx', self.loader.supported_formats)
 
-    @patch('file_loader.loader.Path.exists', return_value=True)
-    @patch('file_loader.loader.Path.stat')
+    @patch('parseiq.file_loader.loader.Path.exists', return_value=True)
+    @patch('parseiq.file_loader.loader.Path.stat')
     def test_load_file_unsupported_format(self, mock_stat, mock_exists):
         mock_stat.return_value.st_size = 1024
         with self.assertRaises(ValueError):
             self.loader.load_file('file.unsupported')
 
-    @patch('file_loader.loader.Path.exists', return_value=False)
+    @patch('parseiq.file_loader.loader.Path.exists', return_value=False)
     def test_load_file_not_found(self, mock_exists):
         with self.assertRaises(FileNotFoundError):
             self.loader.load_file('missing.json')
 
     @patch('file_loader.loader.FileLoader._load_json')
-    @patch('file_loader.loader.Path.exists', return_value=True)
-    @patch('file_loader.loader.Path.stat')
+    @patch('parseiq.file_loader.loader.Path.exists', return_value=True)
+    @patch('parseiq.file_loader.loader.Path.stat')
     def test_load_file_json(self, mock_stat, mock_exists, mock_load_json):
         mock_stat.return_value.st_size = 1024
         # load_file passes the raw dict through _flatten_nested_json.
