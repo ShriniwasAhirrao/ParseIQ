@@ -72,7 +72,7 @@ pip install parseiq[mongodb]     # MongoDB connector only
 **From source:**
 
 ```bash
-git clone https://github.com/ShriniwasAhirrao/ParseIQ-V0.0.1.git
+git clone https://github.com/ShriniwasAhirrao/ParseIQ.git
 cd ParseIQ-V0.0.1
 pip install -e .
 ```

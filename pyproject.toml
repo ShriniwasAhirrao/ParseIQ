@@ -62,8 +62,8 @@ all = [
 parseiq = "parseiq._cli:main"
 
 [project.urls]
-Homepage = "https://github.com/ShriniwasAhirrao/ParseIQ-V0.0.1"
-Repository = "https://github.com/ShriniwasAhirrao/ParseIQ-V0.0.1"
+Homepage = "https://github.com/ShriniwasAhirrao/ParseIQ"
+Repository = "https://github.com/ShriniwasAhirrao/ParseIQ"
 
 [tool.setuptools.packages.find]
 where = ["."]
