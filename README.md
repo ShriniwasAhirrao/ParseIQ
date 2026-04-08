@@ -2,6 +2,13 @@
 
 > Understand your data before you trust it.
 
+[![PyPI version](https://img.shields.io/pypi/v/parseiq?color=blue&label=PyPI)](https://pypi.org/project/parseiq/)
+[![Python](https://img.shields.io/pypi/pyversions/parseiq)](https://pypi.org/project/parseiq/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-159%20passing-brightgreen)](tests/)
+[![GitHub release](https://img.shields.io/github/v/release/ShriniwasAhirrao/ParseIQ)](https://github.com/ShriniwasAhirrao/ParseIQ/releases)
+[![PyPI downloads](https://img.shields.io/pypi/dm/parseiq)](https://pypi.org/project/parseiq/)
+
 ParseIQ analyses any data file (JSON, CSV, XML, Excel) and produces a full data quality report — statistical profiling, anomaly detection, per-table quality scores, and optional AI-generated recommendations — all in a structured Excel workbook and CSV summaries.
 
 Built for the **data onboarding and discovery phase**: when you receive a data dump and need to know what's in it, whether it's trustworthy, and what needs fixing before loading into production.
@@ -28,26 +35,102 @@ For a more detailed report, refer to:
 
 ---
 
-## What It Does
+## How It Works
 
 ```
-Input file  (JSON / CSV / XML / Excel)
-         |
-         v
- Step 1 — Metadata Extractor  (always runs, no API key needed)
-   * Flatten deeply nested JSON into multiple tables automatically
-   * Detect data types, compute statistics (min/max/mean/percentiles)
-   * Flag 8 anomaly types per column
-   * Score every table 0-100
-         |
-         v
- Step 2 — LLM Enricher  (optional, BYOK)
-   * Business-level interpretation of quality issues
-   * Cross-table relationship insights
-   * Prioritised recommendations with effort estimates
-         |
-         v
- Output — Excel workbook  +  CSV summaries  +  JSON metadata files
+  ┌─────────────────────────────────────────────┐
+  │         YOUR DATA FILE                      │
+  │   JSON  /  CSV  /  XML  /  Excel            │
+  └──────────────────┬──────────────────────────┘
+                     │
+                     ▼
+  ┌─────────────────────────────────────────────┐
+  │  STEP 1 — Metadata Extractor                │
+  │  (always runs · no API key needed)          │
+  │                                             │
+  │  • Flatten nested JSON → multiple tables    │
+  │  • Detect data types per column             │
+  │  • Compute stats (min/max/mean/percentiles) │
+  │  • Flag 8 anomaly types per column          │
+  │  • Score every table 0–100                  │
+  └──────────────────┬──────────────────────────┘
+                     │
+          ┌──────────┴──────────┐
+          │ llm=True?           │ llm=False → skip
+          ▼                     ▼
+  ┌───────────────────┐   ┌────────────────────┐
+  │ STEP 2 — LLM      │   │  Local mode        │
+  │ Enricher (BYOK)   │   │  Instant · free    │
+  │                   │   │  Data stays local  │
+  │ • Business-level  │   └────────────────────┘
+  │   interpretation  │
+  │ • Prioritised     │
+  │   recommendations │
+  │ • Quality grade   │
+  │   A–F             │
+  └──────────┬────────┘
+             │
+             ▼
+  ┌─────────────────────────────────────────────┐
+  │  STEP 3 — Output                            │
+  │                                             │
+  │  complete_data_analysis.xlsx                │
+  │    ├── 00_Summary (per-table overview)      │
+  │    ├── 01_LLM_Assessment                    │
+  │    ├── 02_LLM_Recommendations               │
+  │    ├── Data_<table>   (raw rows)            │
+  │    ├── Meta_<table>   (30-col profile)      │
+  │    ├── Quality_<table>(metric per attr)     │
+  │    └── 99_Issues_Recommendations            │
+  │  overall_dataset_summary.csv                │
+  │  combined_issues_and_recommendations.csv    │
+  └─────────────────────────────────────────────┘
+```
+
+## Demo
+
+```bash
+$ parseiq analyze input/enterprises.json --no-llm
+
+=======================================================
+  ParseIQ - AI-Powered Data Quality Agent  v0.0.2
+=======================================================
+
+File     : input/enterprises.json
+Output   : output/
+LLM mode : disabled (local only)
+
+STEP 1: Extracting metadata...
+  employees: analysing (960 records)...  Quality Score: 37.6/100  Anomalies: 9
+  departments: analysing (96 records)... Quality Score: 93.3/100  Anomalies: 1
+  ...
+
+STEP 3: Writing outputs...
+  Excel (46 sheets) → output/complete_data_analysis.xlsx
+
+=======================================================
+ANALYSIS COMPLETE
+=======================================================
+  Tables analysed : 14
+  Total records   : 53,981
+  Avg quality     : 72.4/100
+  Total anomalies : 48
+  LLM grade       : N/A (local mode)
+
+Per-table quality scores:
+  continents     ██████████ 100.0/100  ✓
+  countries      █████████░  94.9/100  ✓
+  employees      ███░░░░░░░  37.6/100  ⚠
+  tasks          ████░░░░░░  48.8/100  ⚠
+
+Anomalies detected:
+  [employees.salary]    NUMERIC_OUTLIERS_DETECTED, NEGATIVE_VALUES_DETECTED
+  [employees.hire_date] FUTURE_DATE_DETECTED
+  [employees.email]     PATTERN_INCONSISTENCY
+  ...
+
+For a more detailed report, refer to:
+  /your/path/output/complete_data_analysis.xlsx
 ```
 
 ---
