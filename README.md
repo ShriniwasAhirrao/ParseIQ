@@ -89,15 +89,18 @@ For a more detailed report, refer to:
           ┌──────────┴──────────┐
           │ llm=True?           │ llm=False → skip
           ▼                     ▼
-  ┌───────────────────┐   ┌────────────────────┐
-  │ STEP 2 — LLM      │   │  Local mode        │
-  │ Enricher (BYOK)   │   │  Instant · free    │
-  │                   │   │  Data stays local  │
-  │ • Business-level  │   └────────────────────┘
-  │   interpretation  │
-  │ • Prioritised     │
-  │   recommendations │
-  │ • Quality grade   │
+  ┌───────────────────┐   ┌─────────────────────────┐
+  │ STEP 2 — LLM      │   │  Local / Fallback mode  │
+  │ Enricher (BYOK)   │   │                         │
+  │                   │   │  • Instant · 100% free  │
+  │ • Sends metadata  │   │  • Zero data leaves     │
+  │   + samples to    │   │    your machine         │
+  │   YOUR chosen API │   │  • Structured report    │
+  │ • Business-level  │   │    with quality grade   │
+  │   interpretation  │   │    and recommendations  │
+  │ • Prioritised     │   │  • Auto-activates if    │
+  │   recommendations │   │    LLM call fails       │
+  │ • Quality grade   │   └─────────────────────────┘
   │   A–F             │
   └──────────┬────────┘
              │
@@ -117,6 +120,28 @@ For a more detailed report, refer to:
   │  combined_issues_and_recommendations.csv    │
   └─────────────────────────────────────────────┘
 ```
+
+### Built-in Fallback Mode
+
+If no API key is set, the network is unavailable, or the LLM call fails for any reason, ParseIQ **automatically falls back to local mode** — you always get a complete structured Excel report with quality scores and recommendations, no matter what. No crash, no empty output, no manual retry needed.
+
+---
+
+## Enterprise & Data Privacy
+
+ParseIQ is designed to fit inside any company's data stack without compromising data governance:
+
+| | What happens |
+|---|---|
+| **Step 1 (always)** | Runs 100% locally. No data leaves your machine. |
+| **Step 2 — LLM mode** | Sends metadata summaries and data samples **directly to your chosen LLM provider** (OpenAI, Anthropic, Google, etc.) using **your own API key**. ParseIQ has no server, no proxy, no telemetry — traffic goes straight from your machine to your provider. |
+| **Step 2 — Local mode** | `--no-llm` keeps everything fully offline. Zero external calls. |
+| **Fallback mode** | If the LLM call fails, ParseIQ generates a full report locally. You always get output. |
+| **Bring Your Own Key** | Use your company's existing LLM contract — OpenAI enterprise, Azure OpenAI, Anthropic Claude, Gemini, or a self-hosted Ollama instance. |
+| **On-prem / air-gapped** | Run with `--no-llm` or point it at a local Ollama endpoint. No internet required. |
+| **Cloud-native** | Runs anywhere Python runs — AWS Lambda, GCP Cloud Run, Azure Functions, Docker, CI/CD pipelines. |
+
+> **No ParseIQ server ever sees your data.** The tool is a local Python process — BYOK means your API key and your data stay under your own infrastructure contract.
 
 ## Demo
 
