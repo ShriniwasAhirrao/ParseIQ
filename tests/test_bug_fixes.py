@@ -66,8 +66,10 @@ def test_bug1_old_code_would_fail():
 
     assert df_old['age'].iloc[0] == '30',         "OLD: age becomes string '30'"
     assert df_old['is_active'].iloc[0] == 'True', "OLD: boolean becomes string 'True'"
-    # bonus[0] was NaN (float col with None) -> astype(str)->'nan' -> replace->'  '
-    assert df_old['bonus'].iloc[0] in ('nan', ''), "OLD: NaN becomes 'nan' or '' string"
+    # bonus[0] was NaN (float col with None) -> astype(str) coerces to 'nan', '', or
+    # float nan depending on pandas version — none of these is the correct None.
+    val = df_old['bonus'].iloc[0]
+    assert val is not None, f"OLD: bonus[0] is corrupted by astype(str), got: {val!r}"
 
     # NEW behaviour
     df_new = df.astype(object).where(df.notna(), other=None)
