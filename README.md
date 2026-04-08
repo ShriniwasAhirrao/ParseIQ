@@ -1,21 +1,52 @@
-# ParseIQ — AI-Powered Data Quality Agent
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ShriniwasAhirrao/ParseIQ/master/assets/banner.svg" alt="ParseIQ Banner" width="100%"/>
+</p>
 
-> Understand your data before you trust it.
+<p align="center">
+  <a href="https://pypi.org/project/parseiq/"><img src="https://img.shields.io/pypi/v/parseiq?color=blue&label=PyPI" alt="PyPI version"/></a>
+  <a href="https://pypi.org/project/parseiq/"><img src="https://img.shields.io/pypi/pyversions/parseiq" alt="Python versions"/></a>
+  <a href="https://github.com/ShriniwasAhirrao/ParseIQ/actions/workflows/test.yml"><img src="https://github.com/ShriniwasAhirrao/ParseIQ/actions/workflows/test.yml/badge.svg" alt="Tests"/></a>
+  <a href="https://pypi.org/project/parseiq/"><img src="https://img.shields.io/pypi/dm/parseiq?color=orange" alt="PyPI downloads"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License"/></a>
+  <a href="https://github.com/ShriniwasAhirrao/ParseIQ/releases"><img src="https://img.shields.io/github/v/release/ShriniwasAhirrao/ParseIQ" alt="Latest release"/></a>
+  <a href="https://github.com/ShriniwasAhirrao/ParseIQ/stargazers"><img src="https://img.shields.io/github/stars/ShriniwasAhirrao/ParseIQ?style=social" alt="GitHub stars"/></a>
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/parseiq?color=blue&label=PyPI)](https://pypi.org/project/parseiq/)
-[![Python](https://img.shields.io/pypi/pyversions/parseiq)](https://pypi.org/project/parseiq/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-159%20passing-brightgreen)](tests/)
-[![GitHub release](https://img.shields.io/github/v/release/ShriniwasAhirrao/ParseIQ)](https://github.com/ShriniwasAhirrao/ParseIQ/releases)
-[![PyPI downloads](https://img.shields.io/pypi/dm/parseiq)](https://pypi.org/project/parseiq/)
+<h3 align="center">AI-Powered Data Quality Agent</h3>
+<p align="center">Profile · Score · Fix any JSON / CSV / XML / Excel file in one command</p>
 
-ParseIQ analyses any data file (JSON, CSV, XML, Excel) and produces a full data quality report — statistical profiling, anomaly detection, per-table quality scores, and optional AI-generated recommendations — all in a structured Excel workbook and CSV summaries.
-
-Built for the **data onboarding and discovery phase**: when you receive a data dump and need to know what's in it, whether it's trustworthy, and what needs fixing before loading into production.
+<p align="center">
+  <a href="https://pypi.org/project/parseiq/"><b>PyPI</b></a> ·
+  <a href="#quickstart"><b>Quickstart</b></a> ·
+  <a href="commands.md"><b>CLI Reference</b></a> ·
+  <a href="CHANGELOG.md"><b>Changelog</b></a> ·
+  <a href="https://github.com/ShriniwasAhirrao/ParseIQ/discussions"><b>Discussions</b></a>
+</p>
 
 ---
 
-## Quickstart
+ParseIQ analyses any data file and produces a full quality report — statistical profiling, anomaly detection, per-table quality scores, and optional AI-generated recommendations — all in a structured Excel workbook and CSV summaries.
+
+Built for the **data onboarding and discovery phase**: when you receive a data dump and need to know what's in it, whether it's trustworthy, and what to fix before loading it into production.
+
+---
+
+## Why ParseIQ?
+
+| Feature | ParseIQ | ydata-profiling | great-expectations |
+|---|:---:|:---:|:---:|
+| Zero config — works out of the box | ✅ | ✅ | ❌ needs YAML |
+| Nested JSON → multiple tables auto | ✅ | ❌ | ❌ |
+| Multi-provider LLM enrichment | ✅ | ❌ | ❌ |
+| Local mode (no API key ever needed) | ✅ | ✅ | ✅ |
+| Excel report with 30-col Meta sheet | ✅ | ❌ | ❌ |
+| CLI + Python API in one package | ✅ | ✅ | ✅ |
+| Incremental processing (hash cache) | ✅ | ❌ | ✅ |
+| pip install, one command, done | ✅ | ✅ | ❌ |
+
+---
+
+## Quickstart <a name="quickstart"></a>
 
 ```bash
 pip install parseiq
@@ -566,6 +597,28 @@ Optional:
 | `boto3` | S3 connector |
 | `psycopg2-binary` | PostgreSQL connector |
 | `pymongo` | MongoDB connector |
+
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+- Found a bug? [Open an issue](https://github.com/ShriniwasAhirrao/ParseIQ/issues/new?template=bug_report.md)
+- Have an idea? [Request a feature](https://github.com/ShriniwasAhirrao/ParseIQ/issues/new?template=feature_request.md)
+- Questions? [Start a discussion](https://github.com/ShriniwasAhirrao/ParseIQ/discussions)
+
+---
+
+## Star History
+
+<p align="center">
+  <a href="https://star-history.com/#ShriniwasAhirrao/ParseIQ&Date">
+    <img src="https://api.star-history.com/svg?repos=ShriniwasAhirrao/ParseIQ&type=Date" alt="Star History Chart" width="600"/>
+  </a>
+</p>
+
+If ParseIQ saves you time, consider giving it a ⭐ — it helps others discover it.
 
 ---
 
