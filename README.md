@@ -149,7 +149,7 @@ ParseIQ is designed to fit inside any company's data stack without compromising 
 $ parseiq analyze input/enterprises.json --no-llm
 
 =======================================================
-  ParseIQ - AI-Powered Data Quality Agent  v0.0.2
+  ParseIQ - AI-Powered Data Quality Agent  v0.0.4
 =======================================================
 
 File     : input/enterprises.json
@@ -202,7 +202,8 @@ pip install parseiq
 ```bash
 pip install parseiq[anthropic]   # Claude models (pip install anthropic)
 pip install parseiq[gemini]      # Google Gemini (pip install google-generativeai)
-pip install parseiq[all]         # all extras: dotenv, anthropic, gemini, boto3, psycopg2, pymongo
+pip install parseiq[rules]       # YAML rules sidecar (pip install pyyaml)
+pip install parseiq[all]         # all extras: dotenv, anthropic, gemini, boto3, psycopg2, pymongo, pyyaml
 pip install parseiq[s3]          # S3 connector only
 pip install parseiq[postgres]    # PostgreSQL connector only
 pip install parseiq[mongodb]     # MongoDB connector only
@@ -418,7 +419,9 @@ complete_data_analysis.xlsx
 
 ## Anomaly Detection
 
-ParseIQ flags 8 types of data quality issues at the column level:
+ParseIQ flags 11 types of data quality issues — 8 column-level detectors that run automatically, plus 3 cross-table detectors available via the rules sidecar or built-in heuristics:
+
+### Automatic (always on)
 
 | Flag | Triggered when |
 |---|---|
@@ -427,9 +430,17 @@ ParseIQ flags 8 types of data quality issues at the column level:
 | `MIXED_DATA_TYPES` | Column contains incompatible types (e.g. integers mixed with strings) |
 | `FUTURE_DATE_DETECTED` | ISO date string is beyond today's date |
 | `NUMERIC_OUTLIERS_DETECTED` | Z-score or IQR outlier detected in a numeric column |
-| `NEGATIVE_VALUES_DETECTED` | Numeric column contains negative values |
+| `NEGATIVE_VALUES_DETECTED` | Numeric column contains negative values (suppressed for financial convention columns — `drawdown`, `var_*`, `shock`, `cfi_*`, `capex`, `pnl`, etc.) |
 | `PATTERN_INCONSISTENCY` | Dominant pattern (e.g. email) but 10–50% of values don't match |
 | `DUPLICATE_ROWS_DETECTED` | Exact duplicate rows found at the table level |
+| `RANGE_VIOLATION_DETECTED` | A numeric value in a child table falls outside the `[lo, hi]` range defined by a `*_range*` column in a parent table (auto-detected via name-match and FK-child heuristics) |
+
+### Via `parseiq_rules.yaml` sidecar
+
+| Flag | Rule type | Example |
+|---|---|---|
+| `SCALE_VIOLATION_DETECTED` | `max_value` / `min_value` | `marks.total > 100` on a 100-point scale |
+| `CONSTRAINT_VIOLATION_DETECTED` | `cross_table_compare` | `claimed_amount > sum_assured` across two FK-linked tables |
 
 Each flagged column incurs a quality score penalty. Table score (0–100) reflects overall severity.
 
@@ -542,7 +553,7 @@ pytest
 pytest --cov=parseiq --cov-report=term-missing
 ```
 
-Current status: **159/159 passing**
+Current status: **159/159 passing** (v0.0.4)
 
 ---
 
@@ -557,12 +568,84 @@ Current status: **159/159 passing**
 
 ---
 
+## What's New in v0.0.4
+
+### Bug Fixes
+
+| Issue | Fixed |
+|---|---|
+| **False positives on financial columns** | `NEGATIVE_VALUES_DETECTED` is now suppressed for columns whose name contains a financial-convention token (`drawdown`, `var_*`, `shock`, `cfi_*`, `cff_*`, `capex`, `pnl`, `loss`, `deficit`, `outflow`, `return_pct`, `alpha`, …). VaR, drawdown, and capex columns no longer produce noise. |
+| **Dependency version conflicts** | All 6 core version pins relaxed (`pandas>=1.5`, `numpy>=1.21`, `scipy>=1.7`, `openpyxl>=3.0`, `chardet>=4.0`, `requests>=2.28`) — ParseIQ now installs cleanly alongside projects that pin older versions. |
+
+### New Features
+
+#### Cross-Level Range Violation Detection (automatic, no config needed)
+
+ParseIQ now detects when a value in a child table breaches a numeric range defined in a parent table — without any user configuration.
+
+**How it works:** Any column named `*_range*` (e.g. `temp_range_c`, `normal_range`) whose value is a `"lo, hi"` string is treated as a bound. ParseIQ then:
+1. **Name-match** — strips `_range` from the column name and searches all other tables for that measurement column (`temp_range_c` → `temp_c`).
+2. **FK-child fallback** — if no name match, finds the direct FK child table and checks its 1–3 numeric columns.
+
+```
+Cold-chain example (TC-05):
+  inventory_zones.temp_range_c = "2, 8"
+  tracking_events.temp_c       = 10.8   ← RANGE_VIOLATION_DETECTED ✅
+
+IoT example (TC-08):
+  sensors.normal_range = "0, 10"
+  readings.value       = 18.9   ← RANGE_VIOLATION_DETECTED ✅
+```
+
+#### Rules Sidecar — Domain Constraint Validation
+
+Place a `parseiq_rules.yaml` (or `.json`) file next to your input file. ParseIQ detects it automatically and applies the rules after Step 1 — no CLI flag, no code change.
+
+```yaml
+# parseiq_rules.yaml
+rules:
+  # Issue I: scale/domain violation — marks total must be <= 100
+  - type: max_value
+    table: students_enrolled
+    column: marks__total
+    max: 100
+    message: "Marks total={val} exceeds 100-point scale"
+
+  # Issue H: cross-table constraint — claim cannot exceed policy limit
+  - type: cross_table_compare
+    left_table: claims
+    left_col: claimed_amount
+    right_table: policies
+    right_col: sum_assured
+    join_key: policy_id
+    fk_key: _ref_policies_id
+    rule: "left <= right"
+    message: "claimed_amount exceeds sum_assured — possible fraud"
+```
+
+Supported rule types:
+
+| Rule type | What it checks | Anomaly raised |
+|---|---|---|
+| `max_value` | `column > max` | `SCALE_VIOLATION_DETECTED` |
+| `min_value` | `column < min` | `SCALE_VIOLATION_DETECTED` |
+| `cross_table_compare` | `left_col OP right_col` across FK-linked tables | `CONSTRAINT_VIOLATION_DETECTED` |
+
+YAML parsing requires `pyyaml` (`pip install parseiq[rules]`). JSON rules files work with no extra dependency.
+
+Violations are injected into each affected table's `top_issues` and `anomaly_summary`, and stored in `raw_metadata["rule_violations"]`.
+
+---
+
 ## Key Features
 
 | Feature | Detail |
 |---|---|
-| **Deep nested JSON flattening** | Recursively discovers all tables; injects `_ref_<parent>_id` FK columns |
+| **Deep nested JSON flattening** | Recursively discovers all tables to arbitrary depth; injects `_ref_<parent>_id` FK columns |
 | **Multi-format input** | JSON (nested), CSV (auto-delimiter), XML, Excel `.xlsx` |
+| **11 anomaly detectors** | 8 column-level (always on) + cross-level range (auto) + 2 via rules sidecar |
+| **Domain-aware negative suppression** | Financial convention columns (`drawdown`, `var_*`, `capex`, `pnl`, …) never trigger false positive NEGATIVE_VALUES flags |
+| **YAML/JSON rules sidecar** | `parseiq_rules.yaml` next to your file — max/min bounds and cross-table constraints, zero config |
 | **Multi-provider LLM** | OpenRouter, OpenAI, Anthropic/Claude, Gemini, Perplexity, Ollama |
 | **BYOK architecture** | Bring your own key — data goes to your LLM account, not ours |
 | **Local mode** | `llm=False` — full Step 1 analysis, no API key, data never leaves machine |
@@ -578,26 +661,28 @@ Current status: **159/159 passing**
 
 ---
 
-## Limitations (V.0.0.2)
+## Limitations (v0.0.4)
 
 - Free-tier OpenRouter: ~10 RPM — one LLM call per run, not per table
 - LLM response time: 2–3 min for large datasets on free tier
 - Max file size: 100 MB
 - Output is files only — no live dashboard
+- YAML rules sidecar requires `pip install parseiq[rules]` for `.yaml` files; `.json` rules work without it
 
 ---
 
 ## Roadmap
 
-**V.0.1.0**
+**v0.1.0**
 - PDF report export
-- Batch processing (folder of files in one command)
-- Cross-table FK violation detection (orphaned records)
+- Batch processing — `parseiq analyze-all data/` (folder of files in one command)
+- Cross-table FK orphan detection — flag `_ref_*` values that don't exist in the parent table
+- `conftest.py` — shared test fixtures
 
-**V.0.2.0**
+**v0.2.0**
 - Web UI — drag-and-drop file upload, results in browser
-- Custom YAML rule definitions (`salary > 0`, `email matches pattern`)
 - Parquet and Google Sheets support
+- Multi-tenancy / job queue (Celery + Redis)
 
 ---
 
@@ -614,14 +699,16 @@ Current status: **159/159 passing**
 | `python-dateutil` | Date parsing |
 
 Optional:
-| Package | Purpose |
-|---|---|
-| `python-dotenv` | `.env` file loading |
-| `anthropic` | Anthropic/Claude API |
-| `google-generativeai` | Google Gemini API |
-| `boto3` | S3 connector |
-| `psycopg2-binary` | PostgreSQL connector |
-| `pymongo` | MongoDB connector |
+
+| Package | Extra | Purpose |
+|---|---|---|
+| `python-dotenv` | `[llm]` | `.env` file loading |
+| `anthropic` | `[anthropic]` | Anthropic/Claude API |
+| `google-generativeai` | `[gemini]` | Google Gemini API |
+| `pyyaml` | `[rules]` | YAML rules sidecar (`parseiq_rules.yaml`) |
+| `boto3` | `[s3]` | S3 connector |
+| `psycopg2-binary` | `[postgres]` | PostgreSQL connector |
+| `pymongo` | `[mongodb]` | MongoDB connector |
 
 ---
 
