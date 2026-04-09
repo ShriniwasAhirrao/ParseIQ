@@ -1,0 +1,12 @@
+# parseiq_rules.yaml — TC-09 Insurance
+# Detects Issue H: claimed_amount exceeding the policy's sum_assured.
+rules:
+  - type: cross_table_compare
+    left_table: claims
+    left_col: claimed_amount
+    right_table: policies
+    right_col: sum_assured
+    join_key: policy_id
+    fk_key: _ref_policies_id
+    rule: "left <= right"
+    message: "claimed_amount exceeds sum_assured — possible fraudulent claim"

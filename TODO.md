@@ -5,6 +5,19 @@
 
 ---
 
+## ✅ Completed — v0.0.4 (2026-04-09)
+
+- ✅ **Issue E** — Relax version pins in `pyproject.toml` so ParseIQ installs cleanly alongside older pandas/numpy
+- ✅ **Issue F** — NEGATIVE_VALUES_DETECTED suppressed for domain-conventional columns (`drawdown`, `var_*`, `shock`, `cfi_*`, `cff_*`, `capex`, `pnl`, etc.)
+- ✅ **Issue G** — Cross-level range violations now detected: `*_range*` parent columns are parsed as [lo, hi]; matching measurement columns in other tables are checked and `RANGE_VIOLATION_DETECTED` is raised (TC-05, TC-08)
+- ✅ **Issue H** — `cross_table_compare` rule type in `parseiq_rules.yaml` sidecar enables cross-table constraint detection (e.g. `claimed_amount <= sum_assured`) (TC-09)
+- ✅ **Issue I** — `max_value` / `min_value` rule types in `parseiq_rules.yaml` enable scale/domain violation detection (e.g. marks total ≤ 100) (TC-04)
+- ✅ **Issue J** — Missing sibling dict key already detected automatically: when `fy2024` is absent for one subsidiary, deep-flatten leaves all `financials__fy2024__*` columns as null → HIGH_NULL_RATE fires at 50% (> 30% threshold). No code change needed; verified in TC-10.
+- ✅ Example rule files added: `test_cases/tc04_university_rules.yaml`, `test_cases/tc09_insurance_rules.yaml`
+- ✅ 159/159 tests passing
+
+---
+
 ## ✅ Completed — v0.0.3 (2026-04-09)
 
 - ✅ Deep JSON flattening — nested dicts recurse to arbitrary depth (`_deep_flatten_scalars` helper)
@@ -119,7 +132,7 @@ Strings > 120 chars starting with `{` or `[` are truncated with `…`.
 
 ---
 
-### Issue E — pip install Environment Collision  *(open — needs PR)*
+### ✅ Issue E — pip install Environment Collision — FIXED in v0.0.4
 **Symptom:** Running `pip install parseiq` into an existing project virtual environment can
 downgrade or conflict with user's pinned dependencies (pandas, openpyxl, etc.).
 
@@ -144,7 +157,7 @@ parseiq analyze data.json
 
 ---
 
-### Issue F — NEGATIVE_VALUES_DETECTED False Positives in Financial Data  *(open — needs PR)*
+### ✅ Issue F — NEGATIVE_VALUES_DETECTED False Positives — FIXED in v0.0.4
 **Symptom:** Columns like `var_1d_99_pct`, `max_drawdown_pct`, `equity_shock`, `cfi_cr` are
 legitimately negative by financial convention (VaR, drawdown, capex outflows) but are flagged
 as `NEGATIVE_VALUES_DETECTED` anomalies, lowering quality scores and producing noisy issues.
@@ -159,7 +172,7 @@ built-in heuristic that suppresses the flag on columns whose name contains `var`
 
 ---
 
-### Issue G — Cross-Level Range Violations Not Detected in Local Mode  *(open — needs PR)*
+### ✅ Issue G — Cross-Level Range Violations — FIXED in v0.0.4
 **Symptom:** When a valid-range spec lives at one nesting level (e.g. `temp_range_c: [2, 8]`
 inside a zone object) and the breaching value lives 4 levels deeper inside `tracking_events`,
 ParseIQ flattens them into separate tables with no link. The breach is never flagged in
@@ -178,7 +191,7 @@ child value falls outside the parent's `[min, max]` pair.
 
 ---
 
-### Issue H — Cross-Table Constraint Violations Not Detected in Local Mode  *(open — needs PR)*
+### ✅ Issue H — Cross-Table Constraint Violations — FIXED in v0.0.4 (via rules sidecar)
 **Symptom:** Constraints that span two separately extracted tables (e.g. `claimed_amount` in
 `claims[]` vs `sum_assured` in `policies[]`) are undetectable in `--no-llm` mode because
 ParseIQ produces flat, unjoined tables.  The FK key is injected but no join + comparison is
@@ -204,7 +217,7 @@ ParseIQ reads the sidecar and applies the join + comparison after extraction.
 
 ---
 
-### Issue I — Scale/Domain Violations Not Detected (e.g. Marks > 100)  *(open — needs PR)*
+### ✅ Issue I — Scale/Domain Violations — FIXED in v0.0.4 (via rules sidecar)
 **Symptom:** When a numeric value is arithmetically coherent but semantically out-of-scale
 (e.g. `total: 128` in a 100-point marks system), ParseIQ does not flag it.  It sees an integer
 and has no concept of the domain upper bound.
@@ -219,7 +232,7 @@ or a YAML rule (`marks.total <= 100`).  Without this, detection requires LLM mod
 
 ---
 
-### Issue J — Missing Sibling Key Not Detected When Parent is a Dict (Not Array)  *(open — needs PR)*
+### ✅ Issue J — Missing Sibling Dict Key — Already Handled (HIGH_NULL_RATE, verified v0.0.4)
 **Symptom:** When a parent object has two sibling dict keys (e.g. `fy2025: {...}` and
 `fy2024: {...}`) and one record is missing `fy2024` entirely, ParseIQ does not flag it.
 The key absence is a structural gap (missing fiscal year), but because the parent is a dict

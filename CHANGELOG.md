@@ -5,6 +5,73 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.4] — 2026-04-09
+
+### Fixed
+
+- **Issue E — Relaxed dependency version pins** (`pyproject.toml`)
+  - `pandas>=2.0.0` → `>=1.5.0`, `numpy>=1.24.0` → `>=1.21.0`, `scipy>=1.11.0` → `>=1.7.0`,
+    `openpyxl>=3.1.0` → `>=3.0.0`, `chardet>=5.2.0` → `>=4.0.0`, `requests>=2.31.0` → `>=2.28.0`.
+  - Prevents pip from downgrading user-pinned dependencies when installing into existing venvs.
+
+- **Issue F — NEGATIVE_VALUES_DETECTED false positives in financial columns**
+  (`parseiq/step1_metadata_extractor/extractor.py`)
+  - Added module-level `_NEGATIVE_ALLOWED_PATTERNS` tuple with 13 token patterns
+    (`drawdown`, `var_`, `shock`, `cfi_`, `cff_`, `capex`, `pnl`, `loss`, `deficit`,
+    `outflow`, `return_pct`, `change_pct`, `alpha`, …).
+  - `_detect_anomalies()` now accepts `attr_name` and suppresses the flag when any
+    pattern appears in the lower-cased column name.
+  - Columns like `max_drawdown_pct`, `var_1d_99_pct`, `equity_shock`, `cfi_cr` no
+    longer produce spurious anomaly flags.
+
+- **Issue G — Cross-level range violations now detected in local mode**
+  (`parseiq/step1_metadata_extractor/extractor.py`)
+  - New `_detect_cross_level_range_violations(tables)` method with a two-tier heuristic:
+    1. **Name match**: strip `_range` from the column name (e.g. `temp_range_c` → `temp_c`)
+       and search all other tables for that exact column.
+    2. **FK fallback**: if no name match, find the direct FK child of the parent table
+       (has `_ref_{parent}_id`) and check all 1-3 numeric columns against the range.
+  - Called automatically in `_extract_multi_table_metadata()`; violations are injected
+    into the child table's `top_issues` and `anomaly_summary` as `RANGE_VIOLATION_DETECTED`.
+  - Catches TC-05 (temp 10.8 °C vs zone range [2, 8]) and TC-08 (vibration 18.9 mm/s
+    vs sensor normal_range [0, 10]) without any user configuration.
+
+### Added
+
+- **Issue H — Cross-table constraint validation via `parseiq_rules.yaml` sidecar**
+  (`parseiq/pipeline.py`)
+  - New rule type `cross_table_compare`: joins left and right tables on a FK, then checks
+    `left_col OP right_col` where OP is `<=`, `<`, `>=`, `>`, or `==`.
+  - Example: `claimed_amount <= sum_assured` joining `claims` → `policies` on `policy_id`.
+  - Violations are injected into the left table's `top_issues` as `CONSTRAINT_VIOLATION_DETECTED`.
+
+- **Issue I — Scale/domain validation via `parseiq_rules.yaml` sidecar**
+  (`parseiq/pipeline.py`)
+  - New rule types `max_value` and `min_value`: flag rows where a column exceeds a bound.
+  - Example: `marks__total <= 100` catches the TC-04 marks scale violation (total = 128).
+  - Violations are injected as `SCALE_VIOLATION_DETECTED`.
+
+- **Rules sidecar file support** (`parseiq/pipeline.py`)
+  - `run()` auto-detects `parseiq_rules.yaml`, `parseiq_rules.yml`, or `parseiq_rules.json`
+    in the same directory as the input file. No CLI flag needed.
+  - YAML support via optional `pyyaml>=6.0` (`pip install parseiq[rules]`). Falls back
+    to JSON if pyyaml is not installed.
+  - New `pyproject.toml` optional extra: `parseiq[rules]`.
+
+- **Example rule files**
+  - `test_cases/tc04_university_rules.yaml` — demonstrates `max_value` for marks cap.
+  - `test_cases/tc09_insurance_rules.yaml` — demonstrates `cross_table_compare` for claim fraud.
+
+### Verified
+
+- **Issue J — Missing sibling dict key already handled**: deep-flattening produces
+  `financials__fy2024__*` = null for the subsidiary that lacks `fy2024`. With ≥ 2 records and
+  one missing, null rate ≥ 50 % → `HIGH_NULL_RATE` fires automatically. No code change needed.
+
+- 159/159 tests passing.
+
+---
+
 ## [0.0.3] — 2026-04-09
 
 ### Fixed

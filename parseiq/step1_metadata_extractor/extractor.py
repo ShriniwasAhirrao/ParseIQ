@@ -6,9 +6,19 @@ from typing import Any, Dict, List, Union, Set
 from datetime import datetime
 from .utils import StatisticalUtils
 
+# Columns where negative values are expected by financial / scientific convention.
+# NEGATIVE_VALUES_DETECTED is suppressed when any of these tokens appears in the
+# lower-cased column name.
+_NEGATIVE_ALLOWED_PATTERNS = (
+    'var_', 'drawdown', '_shock', 'cfi_', 'cff_', 'capex', 'pnl',
+    'loss', 'deficit', 'outflow', 'return_pct', 'change_pct',
+    'growth_pct', 'alpha', 'spread', 'discount', 'impairment',
+)
+
+
 class MetadataExtractor:
     """Comprehensive metadata extraction with detailed nested attribute analysis"""
-    
+
     def __init__(self):
         self.stats_utils = StatisticalUtils()
         self.regex_patterns = {
@@ -93,6 +103,26 @@ class MetadataExtractor:
         # Perform cross-table analysis if multiple tables exist
         if len(valid_tables) > 1:
             metadata["cross_table_analysis"] = self._analyze_cross_table_relationships(valid_tables)
+            # Cross-level range violation detection (Issue G)
+            range_violations = self._detect_cross_level_range_violations(valid_tables)
+            if range_violations:
+                metadata["cross_table_analysis"]["range_violations"] = range_violations
+                for v in range_violations:
+                    child = v["child_table"]
+                    if child in metadata["tables"]:
+                        msg = (
+                            f"RANGE_VIOLATION_DETECTED: {v['measure_column']}={v['violating_value']} "
+                            f"breaches {v['parent_table']}.{v['range_column']}={v['range']}"
+                        )
+                        tbl = metadata["tables"][child]
+                        if msg not in tbl.get("top_issues", []):
+                            tbl.setdefault("top_issues", []).append(msg)
+                        asum = tbl.setdefault("anomaly_summary", {"total_anomalies": 0, "anomaly_types": {}})
+                        asum["total_anomalies"] += 1
+                        asum.setdefault("anomaly_types", {})
+                        asum["anomaly_types"]["RANGE_VIOLATION_DETECTED"] = (
+                            asum["anomaly_types"].get("RANGE_VIOLATION_DETECTED", 0) + 1
+                        )
         
         # Calculate overall quality score
         table_scores = [t["data_quality_score"] for t in metadata["tables"].values()]
@@ -546,7 +576,7 @@ class MetadataExtractor:
         attr_metadata["pattern_analysis"] = self._analyze_patterns(values)
         
         # Anomaly detection
-        attr_metadata["anomaly_flags"] = self._detect_anomalies(attr_metadata, values)
+        attr_metadata["anomaly_flags"] = self._detect_anomalies(attr_metadata, values, attr_name)
         
         # Quality assessment
         attr_metadata["quality_score"] = self._calculate_attribute_quality_score(attr_metadata)
@@ -768,7 +798,8 @@ class MetadataExtractor:
             "dominant_pattern": max(pattern_matches.items(), key=lambda x: x[1]["matches"])[0] if pattern_matches else None
         }
 
-    def _detect_anomalies(self, attr_metadata: Dict[str, Any], values: List[Any]) -> List[str]:
+    def _detect_anomalies(self, attr_metadata: Dict[str, Any], values: List[Any],
+                          attr_name: str = "") -> List[str]:
         """Detect anomalies in attribute data"""
         anomalies = []
         
@@ -790,9 +821,13 @@ class MetadataExtractor:
             if outliers.get("count", 0) > 0:
                 anomalies.append("NUMERIC_OUTLIERS_DETECTED")
             
-            # Check for negative values where they shouldn't be
+            # Check for negative values where they shouldn't be.
+            # Suppress for columns where negatives are a domain convention
+            # (VaR, drawdown, capex outflows, P&L losses, etc.).
             if "min_value" in attr_metadata and attr_metadata["min_value"] < 0:
-                anomalies.append("NEGATIVE_VALUES_DETECTED")
+                col_lower = attr_name.lower()
+                if not any(p in col_lower for p in _NEGATIVE_ALLOWED_PATTERNS):
+                    anomalies.append("NEGATIVE_VALUES_DETECTED")
         
         # Low uniqueness (skip for boolean fields — low cardinality is expected)
         unique_ratio = attr_metadata.get("unique_ratio", 0)
@@ -941,6 +976,113 @@ class MetadataExtractor:
             "anomaly_types": dict(anomaly_types),
             "anomaly_rate": round((affected_attributes / len(attributes)) * 100, 2) if attributes else 0
         }
+
+    def _col_is_numeric(self, records: List[Dict], col: str) -> bool:
+        """Return True if the column has at least one non-boolean numeric value."""
+        for rec in records:
+            val = rec.get(col)
+            if val is not None and not isinstance(val, bool):
+                try:
+                    float(val)
+                    return True
+                except (ValueError, TypeError):
+                    pass
+        return False
+
+    def _detect_cross_level_range_violations(self, tables: Dict[str, List[Dict]]) -> List[Dict]:
+        """Detect range violations where a *_range* column in a parent table defines
+        numeric bounds for a related measurement column in another table.
+
+        Two-tier heuristic:
+        1. Name match: strip '_range' from the column name and look for that exact
+           column name in any other table (e.g. temp_range_c → temp_c).
+        2. FK fallback: if no name match, check whether any table is a direct FK
+           child of the parent (has _ref_{parent}_id). If that child has 1-3 numeric
+           columns (excluding ids/timestamps/booleans), check all of them.
+        """
+        violations: List[Dict] = []
+        table_cols: Dict[str, Set[str]] = {
+            name: self._collect_all_attributes_from_records(records)
+            for name, records in tables.items()
+        }
+
+        for parent_name, parent_records in tables.items():
+            for col in table_cols[parent_name]:
+                if "_range" not in col and not col.endswith("_limit"):
+                    continue
+
+                # Parse [lo, hi] from a comma-separated value like "2, 8"
+                lo: Optional[float] = None
+                hi: Optional[float] = None
+                for rec in parent_records:
+                    val = rec.get(col)
+                    if isinstance(val, str) and "," in val:
+                        parts = val.split(",")
+                        if len(parts) == 2:
+                            try:
+                                lo, hi = float(parts[0].strip()), float(parts[1].strip())
+                                break
+                            except ValueError:
+                                continue
+                if lo is None:
+                    continue
+
+                # Derive candidate measurement column name
+                meas_candidate = col.replace("_range", "").strip("_")
+
+                for child_name, child_records in tables.items():
+                    if child_name == parent_name:
+                        continue
+
+                    child_cols = table_cols[child_name]
+                    candidate_cols: List[str] = []
+
+                    # Tier 1: exact name match
+                    if meas_candidate and meas_candidate in child_cols:
+                        candidate_cols.append(meas_candidate)
+
+                    # Tier 2: FK child with few numeric columns
+                    if not candidate_cols:
+                        fk_col = f"_ref_{parent_name}_id"
+                        if fk_col in child_cols:
+                            _skip = {"alert", "status", "flag", "active", "enabled"}
+                            numeric_cols = [
+                                c for c in child_cols
+                                if not c.startswith("_ref_")
+                                and not c.endswith("_id")
+                                and c.lower() not in _skip
+                                and "timestamp" not in c.lower()
+                                and "date" not in c.lower()
+                                and not isinstance(
+                                    next((r.get(c) for r in child_records if r.get(c) is not None), None),
+                                    bool,
+                                )
+                                and self._col_is_numeric(child_records, c)
+                            ]
+                            if 1 <= len(numeric_cols) <= 3:
+                                candidate_cols = numeric_cols
+
+                    for meas_col in candidate_cols:
+                        for rec in child_records:
+                            val = rec.get(meas_col)
+                            if val is None:
+                                continue
+                            try:
+                                fval = float(val)
+                                if fval < lo or fval > hi:
+                                    violations.append({
+                                        "parent_table": parent_name,
+                                        "range_column": col,
+                                        "range": [lo, hi],
+                                        "child_table": child_name,
+                                        "measure_column": meas_col,
+                                        "violating_value": fval,
+                                        "anomaly": "RANGE_VIOLATION_DETECTED",
+                                    })
+                            except (ValueError, TypeError):
+                                continue
+
+        return violations
 
     def _identify_top_issues(self, attributes: Dict[str, Any]) -> List[str]:
         """Identify the top data quality issues"""

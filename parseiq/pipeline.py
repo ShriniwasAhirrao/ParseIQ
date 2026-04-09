@@ -206,6 +206,18 @@ class Pipeline:
         created_files.append(raw_path)
         print(f"  raw_metadata.json written  ({time.time() - t1:.1f}s)")
 
+        # ── User-defined rules (Issues H, I) ──────────────────────────────
+        rule_violations: List[Dict[str, Any]] = []
+        if self._source_type == "file" and self._source_arg:
+            rules_path = _find_rules_file(str(self._source_arg))
+            if rules_path:
+                print(f"  Applying rules: {os.path.basename(rules_path)}...")
+                rules = _load_rules(rules_path)
+                rule_violations = _apply_rules(rules, tables, raw_metadata)
+                if rule_violations:
+                    print(f"  {len(rule_violations)} rule violation(s) detected.")
+                    raw_metadata["rule_violations"] = rule_violations
+
         # ── Alert rules (post Step 1) ──────────────────────────────────────
         alerts_fired: List[Dict[str, Any]] = []
         if alert_rules:
@@ -580,6 +592,197 @@ def _describe_issue(flag: str, col: str, table: str, dtype: str,
         effort = "Medium"
 
     return desc, impact, fix, effort
+
+
+# ---------------------------------------------------------------------------
+# Rules engine (Issues H & I) — reads parseiq_rules.yaml/.json sidecar
+# ---------------------------------------------------------------------------
+
+def _find_rules_file(source_arg: str) -> Optional[str]:
+    """Return path of a parseiq_rules.yaml/yml/json sidecar next to the input file."""
+    if not os.path.isfile(source_arg):
+        return None
+    base_dir = os.path.dirname(os.path.abspath(source_arg))
+    for name in ("parseiq_rules.yaml", "parseiq_rules.yml", "parseiq_rules.json"):
+        candidate = os.path.join(base_dir, name)
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def _load_rules(rules_path: str) -> List[Dict[str, Any]]:
+    """Parse a rules sidecar file. Supports YAML (if pyyaml installed) and JSON."""
+    ext = os.path.splitext(rules_path)[1].lower()
+    with open(rules_path, "r", encoding="utf-8") as fh:
+        content = fh.read()
+    if ext in (".yaml", ".yml"):
+        try:
+            import yaml  # type: ignore
+            data = yaml.safe_load(content)
+        except ImportError:
+            import json as _json
+            data = _json.loads(content)
+    else:
+        import json as _json
+        data = _json.loads(content)
+    return data.get("rules", []) if isinstance(data, dict) else []
+
+
+def _inject_violation(raw_metadata: Dict, table_name: str,
+                      anomaly_key: str, message: str) -> None:
+    """Inject a rule violation into the named table's metadata top_issues."""
+    tbl = raw_metadata.get("tables", {}).get(table_name)
+    if not tbl:
+        return
+    inner = tbl.get("table_metadata", tbl)
+    issues = inner.setdefault("top_issues", [])
+    if message not in issues:
+        issues.append(message)
+    asum = inner.setdefault("anomaly_summary", {"total_anomalies": 0, "anomaly_types": {}})
+    asum["total_anomalies"] = asum.get("total_anomalies", 0) + 1
+    asum.setdefault("anomaly_types", {})[anomaly_key] = (
+        asum["anomaly_types"].get(anomaly_key, 0) + 1
+    )
+
+
+def _apply_rules(rules: List[Dict[str, Any]],
+                 tables: Dict[str, List[Dict]],
+                 raw_metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Dispatch each rule to its handler and return all violations."""
+    violations: List[Dict[str, Any]] = []
+    for rule in rules:
+        rtype = rule.get("type", "")
+        if rtype == "max_value":
+            violations.extend(_rule_max_value(rule, tables, raw_metadata))
+        elif rtype == "min_value":
+            violations.extend(_rule_min_value(rule, tables, raw_metadata))
+        elif rtype == "cross_table_compare":
+            violations.extend(_rule_cross_table(rule, tables, raw_metadata))
+    return violations
+
+
+def _rule_max_value(rule: Dict, tables: Dict, raw_metadata: Dict) -> List[Dict]:
+    """Flag rows where column > max."""
+    violations: List[Dict] = []
+    tname = rule.get("table", "")
+    col   = rule.get("column", "")
+    bound = rule.get("max")
+    msg_tmpl = rule.get("message", f"{col} exceeds max {{val}} (limit {bound})")
+    if tname not in tables or not col or bound is None:
+        return violations
+    for rec in tables[tname]:
+        val = rec.get(col)
+        if val is None:
+            continue
+        try:
+            if float(val) > float(bound):
+                v = {"rule_type": "max_value", "table": tname, "column": col,
+                     "value": val, "max": bound, "anomaly": "SCALE_VIOLATION_DETECTED",
+                     "message": msg_tmpl.format(val=val)}
+                violations.append(v)
+                _inject_violation(
+                    raw_metadata, tname, "SCALE_VIOLATION_DETECTED",
+                    f"SCALE_VIOLATION_DETECTED: {col}={val} exceeds max {bound}",
+                )
+        except (ValueError, TypeError):
+            pass
+    return violations
+
+
+def _rule_min_value(rule: Dict, tables: Dict, raw_metadata: Dict) -> List[Dict]:
+    """Flag rows where column < min."""
+    violations: List[Dict] = []
+    tname = rule.get("table", "")
+    col   = rule.get("column", "")
+    bound = rule.get("min")
+    msg_tmpl = rule.get("message", f"{col} below min {{val}} (floor {bound})")
+    if tname not in tables or not col or bound is None:
+        return violations
+    for rec in tables[tname]:
+        val = rec.get(col)
+        if val is None:
+            continue
+        try:
+            if float(val) < float(bound):
+                v = {"rule_type": "min_value", "table": tname, "column": col,
+                     "value": val, "min": bound, "anomaly": "SCALE_VIOLATION_DETECTED",
+                     "message": msg_tmpl.format(val=val)}
+                violations.append(v)
+                _inject_violation(
+                    raw_metadata, tname, "SCALE_VIOLATION_DETECTED",
+                    f"SCALE_VIOLATION_DETECTED: {col}={val} below min {bound}",
+                )
+        except (ValueError, TypeError):
+            pass
+    return violations
+
+
+def _rule_cross_table(rule: Dict, tables: Dict, raw_metadata: Dict) -> List[Dict]:
+    """Flag rows where left_table.left_col violates an inequality vs right_table.right_col.
+
+    The right table is the 'parent' (holds the limit value).  The FK from
+    left_table back to right_table is inferred as _ref_{right_table}_id unless
+    'fk_key' is specified.  'join_key' names the PK column in right_table.
+    """
+    violations: List[Dict] = []
+    ltname = rule.get("left_table", "")
+    lcol   = rule.get("left_col", "")
+    rtname = rule.get("right_table", "")
+    rcol   = rule.get("right_col", "")
+    jkey   = rule.get("join_key", "")         # PK col in right_table
+    fk_key = rule.get("fk_key", f"_ref_{rtname}_id")   # FK col in left_table
+    expr   = rule.get("rule", "left <= right")
+    msg    = rule.get("message",
+                      f"{ltname}.{lcol} violates '{expr}' vs {rtname}.{rcol}")
+
+    if not all([ltname, lcol, rtname, rcol]) or ltname not in tables or rtname not in tables:
+        return violations
+
+    # Build lookup: right PK value → right col value
+    right_lookup: Dict[str, float] = {}
+    for rec in tables[rtname]:
+        pk = rec.get(jkey) if jkey else None
+        rv = rec.get(rcol)
+        if pk is not None and rv is not None:
+            try:
+                right_lookup[str(pk)] = float(rv)
+            except (ValueError, TypeError):
+                pass
+
+    _ops = {
+        "left <= right": lambda l, r: l > r,
+        "left < right":  lambda l, r: l >= r,
+        "left >= right": lambda l, r: l < r,
+        "left > right":  lambda l, r: l <= r,
+        "left == right": lambda l, r: l != r,
+    }
+    violates = _ops.get(expr, lambda l, r: False)
+
+    for rec in tables[ltname]:
+        lv = rec.get(lcol)
+        fk = rec.get(fk_key)
+        if lv is None or fk is None:
+            continue
+        rv = right_lookup.get(str(fk))
+        if rv is None:
+            continue
+        try:
+            lf = float(lv)
+            if violates(lf, rv):
+                v = {"rule_type": "cross_table_compare",
+                     "left_table": ltname, "left_col": lcol, "left_value": lf,
+                     "right_table": rtname, "right_col": rcol, "right_value": rv,
+                     "join_key": str(fk), "anomaly": "CONSTRAINT_VIOLATION_DETECTED",
+                     "message": msg}
+                violations.append(v)
+                _inject_violation(
+                    raw_metadata, ltname, "CONSTRAINT_VIOLATION_DETECTED",
+                    f"CONSTRAINT_VIOLATION_DETECTED: {lcol}={lf} violates '{expr}' "
+                    f"vs {rtname}.{rcol}={rv}",
+                )
+        except (ValueError, TypeError):
+            pass
+    return violations
 
 
 def _generate_outputs(tables, raw_metadata, enriched, out_dir) -> List[str]:

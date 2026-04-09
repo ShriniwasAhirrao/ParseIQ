@@ -141,6 +141,84 @@ Tested against `input/input_data.json` (deeply nested: org → dept → head →
 
 ---
 
+## Session: 2026-04-09 — Fix All Open Issues (v0.0.4)
+
+### Overview
+Fixed all 6 open known issues (E–J) identified during the multi-domain test case analysis.
+Implemented three distinct mechanisms: column-name heuristic suppression (F), automatic
+cross-level range detection (G), and a user-defined YAML/JSON rules sidecar engine (H, I).
+Issue J was verified to already be handled by the existing HIGH_NULL_RATE detector.
+
+### Issue E — Relax Version Pins (`pyproject.toml`)
+
+Lowered minimum required versions for all 6 core dependencies to the earliest versions
+that are still compatible with ParseIQ's API usage. Prevents pip from conflict-resolving
+user's existing environment into incompatible downgrades.
+
+### Issue F — NEGATIVE_VALUES False Positives (`extractor.py`)
+
+Added `_NEGATIVE_ALLOWED_PATTERNS` module-level tuple (13 tokens).  Updated
+`_detect_anomalies(attr_metadata, values, attr_name="")` — new `attr_name` parameter
+flows from `_analyze_attribute` (already has it).  NEGATIVE_VALUES check now skips
+columns whose lowercased name contains any allowed pattern.
+
+**Verified:** `max_drawdown_pct = [-18.2, -12.4]` → no flag.  `salary = [-5000]` → flag.
+
+### Issue G — Cross-Level Range Violations (`extractor.py`)
+
+New `_detect_cross_level_range_violations(tables)` method:
+- Scans all tables for `*_range*` columns containing comma-separated `"lo, hi"` pairs.
+- **Tier 1** (name match): strips `_range` from the column name, searches all other tables.
+  `temp_range_c` → `temp_c`; finds breach 10.8 in `tracking_events`. ✅
+- **Tier 2** (FK fallback): if no name match, checks direct FK child tables (`_ref_{parent}_id`).
+  `normal_range` has no name match; `readings` is FK child of `sensors` with 1 numeric col (`value`);
+  checks `value` against [0, 10]; finds breach 18.9. ✅
+- Called in `_extract_multi_table_metadata()` after cross-table relationship analysis.
+- Violations injected into child table `top_issues` + `anomaly_summary` as `RANGE_VIOLATION_DETECTED`.
+
+### Issues H & I — YAML Rules Sidecar Engine (`pipeline.py`)
+
+Four new module-level helpers added after `_describe_issue`:
+
+| Function | Purpose |
+|---|---|
+| `_find_rules_file(source_arg)` | Looks for `parseiq_rules.yaml/yml/json` next to input file |
+| `_load_rules(rules_path)` | Parses YAML (via pyyaml) or JSON; returns `rules` list |
+| `_apply_rules(rules, tables, raw_metadata)` | Dispatches each rule to its handler |
+| `_rule_max_value` / `_rule_min_value` | Flag column > max or < min (Issue I) |
+| `_rule_cross_table` | Join left/right tables on FK, check inequality (Issue H) |
+
+Rules are applied in `run()` after `raw_metadata` is built, before alert rules.
+Violations are stored in `raw_metadata["rule_violations"]` and injected into each
+affected table's `top_issues` and `anomaly_summary`.
+
+Example rules files created: `test_cases/tc04_university_rules.yaml` (max_value),
+`test_cases/tc09_insurance_rules.yaml` (cross_table_compare).
+
+### Issue J — Missing Sibling Dict Key
+
+Deep-flatten already produces null columns for missing fiscal year keys (e.g. `financials__fy2024__*`).
+With 2 subsidiaries and 1 missing fy2024: null rate = 50 % > 30 % threshold → HIGH_NULL_RATE fires.
+No code change. Added verification note to TODO.md and CHANGELOG.md.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `pyproject.toml` | Relaxed 6 version pins; added `rules = ["pyyaml>=6.0"]` optional extra |
+| `parseiq/step1_metadata_extractor/extractor.py` | Issues F + G: `_NEGATIVE_ALLOWED_PATTERNS`, `_detect_anomalies(attr_name)`, `_detect_cross_level_range_violations()`, `_col_is_numeric()` |
+| `parseiq/pipeline.py` | Issues H + I: `_find_rules_file`, `_load_rules`, `_apply_rules`, `_rule_max_value`, `_rule_min_value`, `_rule_cross_table`; rules invocation in `run()` |
+| `test_cases/tc04_university_rules.yaml` | Example max_value rule |
+| `test_cases/tc09_insurance_rules.yaml` | Example cross_table_compare rule |
+| `TODO.md` | Issues E–J marked as fixed (v0.0.4) |
+| `CHANGELOG.md` | v0.0.4 entry |
+| `WORKLOG.md` | This entry |
+
+### Test Results
+- 159/159 passing
+
+---
+
 ## Session: 2026-04-09 — Multi-Domain Test Case Suite (TC-01 to TC-10)
 
 ### Overview

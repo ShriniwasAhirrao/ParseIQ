@@ -1,0 +1,8 @@
+# parseiq_rules.yaml — TC-04 University
+# Detects Issue I: marks total exceeding the 100-point scale cap.
+rules:
+  - type: max_value
+    table: students_enrolled
+    column: marks__total
+    max: 100
+    message: "Marks total={val} exceeds 100-point scale (scale violation)"
