@@ -1,0 +1,100 @@
+{
+  "company": "NovaTech Solutions",
+  "fiscal_year": 2025,
+  "departments": [
+    {
+      "dept_id": "D01",
+      "name": "Engineering",
+      "budget_inr": 18000000,
+      "employees": [
+        {
+          "emp_id": "E001",
+          "name": "Aakash Verma",
+          "doj": "2021-06-01",
+          "designation": "Senior Engineer",
+          "salary_annual": 1400000,
+          "skills": [
+            "Python",
+            "Kubernetes",
+            "GCP"
+          ],
+          "appraisals": [
+            {
+              "year": 2023,
+              "rating": 4.2,
+              "hike_pct": 12
+            },
+            {
+              "year": 2024,
+              "rating": 4.5,
+              "hike_pct": 15
+            },
+            {
+              "year": 2025,
+              "rating": 4.8,
+              "hike_pct": 18
+            }
+          ]
+        },
+        {
+          "emp_id": "E002",
+          "name": "Sneha Kulkarni",
+          "doj": "01/03/2022",
+          "designation": "Junior Engineer",
+          "skills": [
+            "React",
+            "Node.js"
+          ],
+          "appraisals": [
+            {
+              "year": 2023,
+              "rating": 3.9,
+              "hike_pct": 8
+            },
+            {
+              "year": 2024,
+              "rating": 4.1,
+              "hike_pct": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dept_id": "D02",
+      "name": "Marketing",
+      "budget_inr": 8000000,
+      "employees": [
+        {
+          "emp_id": "E010",
+          "name": "Rahul Jain",
+          "doj": "2020-01-15",
+          "designation": "Marketing Manager",
+          "salary_annual": 950000,
+          "skills": [
+            "SEO",
+            "Google Ads",
+            "HubSpot"
+          ],
+          "appraisals": [
+            {
+              "year": 2023,
+              "rating": 4.0,
+              "hike_pct": 9
+            },
+            {
+              "year": 2024,
+              "rating": 3.8,
+              "hike_pct": 7
+            },
+            {
+              "year": 2025,
+              "rating": 4.2,
+              "hike_pct": 11
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

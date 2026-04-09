@@ -600,10 +600,19 @@ def _generate_outputs(tables, raw_metadata, enriched, out_dir) -> List[str]:
                 if cand not in used: break
         used.add(cand); return cand
 
+    visited_tables: set = set()
     for tname, rows in tables.items():
         if not rows: continue
+        if tname in visited_tables: continue
+        visited_tables.add(tname)
         df_raw = pd.DataFrame(rows)
         df = df_raw.astype(object).where(df_raw.notna(), other=None)
+        # Truncate JSON-blob strings so Data_ sheet columns stay readable
+        def _truncate_blobs(val, limit=120):
+            if isinstance(val, str) and len(val) > limit and (val.startswith("{") or val.startswith("[")):
+                return val[:limit] + "…"
+            return val
+        df = df.apply(lambda col: col.map(_truncate_blobs))
         excel_sheets[_safe("Data_", tname)] = df
 
         tbl_meta = raw_metadata.get("tables", {}).get(tname, {})
@@ -799,7 +808,7 @@ def _generate_outputs(tables, raw_metadata, enriched, out_dir) -> List[str]:
             "Columns": len(attrs),
             "Quality_Score": round(qs.get(tname, 0), 1),
             "Anomaly_Columns": len(anomaly_cols),
-            "Top_Issues": "; ".join(inner.get("top_issues", [])[:3]) or "None",
+            "Top_Issues": "; ".join(inner.get("top_issues", [])[:3]) or "",
         })
     pipeline_meta_rows = [
         {"Table": "— PIPELINE SUMMARY —", "Records": "", "Columns": "",
@@ -856,7 +865,10 @@ def _generate_outputs(tables, raw_metadata, enriched, out_dir) -> List[str]:
     combined_rows = []
 
     # Section 1: Step 1 column-level anomalies with human descriptions + fixes
+    _seen_issue_tables: set = set()
     for tname, _rows in tables.items():
+        if tname in _seen_issue_tables: continue
+        _seen_issue_tables.add(tname)
         tmeta = raw_metadata.get("tables", {}).get(tname, {})
         inner = tmeta.get("table_metadata", tmeta)
         rec_count = len(_rows)

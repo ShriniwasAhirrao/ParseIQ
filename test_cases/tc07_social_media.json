@@ -1,0 +1,163 @@
+{
+  "agency": "DigitalPulse Analytics",
+  "report_period": {
+    "from": "2025-Q3",
+    "to": "2025-Q4"
+  },
+  "clients": [
+    {
+      "client_id": "CLT-001",
+      "brand": "NaturalGlow Skincare",
+      "industry": "Beauty & Wellness",
+      "campaigns": [
+        {
+          "campaign_id": "CMP-001",
+          "name": "Monsoon Glow 2025",
+          "objective": "Brand Awareness",
+          "budget_inr": 500000,
+          "start_date": "2025-07-01",
+          "end_date": "2025-08-31",
+          "target_audience": {
+            "age_range": [
+              18,
+              34
+            ],
+            "gender": "Female",
+            "interests": [
+              "skincare",
+              "wellness",
+              "yoga"
+            ]
+          },
+          "platforms": [
+            {
+              "platform": "Instagram",
+              "posts": [
+                {
+                  "post_id": "PST-IG-001",
+                  "type": "Reel",
+                  "published_at": "2025-07-05T10:00:00",
+                  "content_tags": [
+                    "#monsoon",
+                    "#skincare",
+                    "#naturalglow"
+                  ],
+                  "influencer": {
+                    "handle": "@glowwithpriya",
+                    "followers": 450000,
+                    "category": "Macro"
+                  },
+                  "metrics": {
+                    "impressions": 890000,
+                    "reach": 620000,
+                    "likes": 48200,
+                    "comments": 3100,
+                    "shares": 1800,
+                    "saves": 9400,
+                    "engagement_rate_pct": 10.2,
+                    "paid_vs_organic": {
+                      "paid_reach": 180000,
+                      "organic_reach": 440000
+                    }
+                  },
+                  "sentiment": {
+                    "positive_pct": 72.4,
+                    "neutral_pct": 21.1,
+                    "negative_pct": 6.5,
+                    "top_keywords": [
+                      "beautiful",
+                      "love",
+                      "glowing",
+                      "expensive",
+                      "fake"
+                    ]
+                  }
+                },
+                {
+                  "post_id": "PST-IG-002",
+                  "type": "Carousel",
+                  "published_at": "2025-07-15T18:00:00",
+                  "content_tags": [
+                    "#skincareroutine",
+                    "#naturalglow"
+                  ],
+                  "influencer": {
+                    "handle": "@beautybyneha",
+                    "followers": 120000,
+                    "category": "Micro"
+                  },
+                  "metrics": {
+                    "impressions": 95000,
+                    "reach": 72000,
+                    "likes": -320,
+                    "comments": 410,
+                    "shares": 210,
+                    "saves": 880,
+                    "engagement_rate_pct": 145.2,
+                    "paid_vs_organic": {
+                      "paid_reach": 30000,
+                      "organic_reach": 42000
+                    }
+                  },
+                  "sentiment": {
+                    "positive_pct": 61.0,
+                    "neutral_pct": 28.5,
+                    "negative_pct": 10.5,
+                    "top_keywords": [
+                      "decent",
+                      "okay",
+                      "try",
+                      "meh"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "posts": [
+                {
+                  "post_id": "PST-YT-001",
+                  "type": "Video",
+                  "published_at": "2025-07-20T12:00:00",
+                  "content_tags": [
+                    "#skincare",
+                    "#monsoon"
+                  ],
+                  "influencer": {
+                    "handle": "GlowTV",
+                    "followers": 850000,
+                    "category": "Mega"
+                  },
+                  "metrics": {
+                    "impressions": 1200000,
+                    "reach": 950000,
+                    "likes": 32000,
+                    "comments": 5600,
+                    "shares": 4100,
+                    "saves": null,
+                    "engagement_rate_pct": 4.4,
+                    "paid_vs_organic": {
+                      "paid_reach": 300000,
+                      "organic_reach": 650000
+                    }
+                  },
+                  "sentiment": {
+                    "positive_pct": 68.0,
+                    "neutral_pct": 24.0,
+                    "negative_pct": 8.0,
+                    "top_keywords": [
+                      "helpful",
+                      "informative",
+                      "glow",
+                      "recommend"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

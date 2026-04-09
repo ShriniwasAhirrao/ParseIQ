@@ -1,7 +1,23 @@
 # ParseIQ — TODO & Backlog
 
-> Last updated: 2026-04-06
+> Last updated: 2026-04-09
 > Status legend:  ✅ Done  |  ⏳ Next  |  💡 Future
+
+---
+
+## ✅ Completed — v0.0.3 (2026-04-09)
+
+- ✅ Deep JSON flattening — nested dicts recurse to arbitrary depth (`_deep_flatten_scalars` helper)
+- ✅ No more blob columns in Excel Data sheets (financials, ml_signals, risk_framework, head.performance)
+- ✅ `stress_scenarios` and `top_signals` now extracted as proper tables (were missing)
+- ✅ Quality score = 0 bug fixed — rate-based table penalty capped at 20 pts
+- ✅ Duplicate table processing guard (`visited_tables` set in output loop)
+- ✅ Excel blob truncation — `_truncate_blobs()` on all Data_ sheets (120 char limit)
+- ✅ Context bleed between tables fixed (side-effect of deep-flatten fix)
+- ✅ `'None'` string in 00_Summary Top_Issues replaced with empty cell
+- ✅ Privacy fix — prompt template path logs filename only (not full absolute path)
+- ✅ Community bug docs — TODO.md Known Bugs + CONTRIBUTING.md Good First Issues sections
+- ✅ Test updated for new quality score formula — 159/159 passing
 
 ---
 
@@ -72,3 +88,149 @@
 - LLM response time: 2–3 min for large datasets on free tier
 - Max file size: 100 MB
 - Output is files only — no live dashboard
+
+---
+
+## Known Bugs — Open for Community PRs
+
+> Each entry includes: symptoms · affected file · suggested fix · PR label.
+
+### ✅ Bug A — Duplicate Table Analysis Loop — FIXED in v0.0.3
+`visited_tables: set` guard added to `parseiq/pipeline.py` output builder loops.
+
+---
+
+### ✅ Bug B — Attribute Context Bleeding Between Tables — FIXED in v0.0.3
+Fixed as a side-effect of the deep-flatten loader rewrite. Root cause was blob-stringification
+mixing sibling-context attributes into the same table record.
+
+---
+
+### ✅ Bug C — Inconsistent Flattening Depth — FIXED in v0.0.3
+`_deep_flatten_scalars()` helper added to `parseiq/file_loader/loader.py`.
+All nested dicts now recurse to arbitrary depth with `__`-joined column names.
+Previously missing tables (`stress_scenarios`, `top_signals`) now extracted correctly.
+
+---
+
+### ✅ Bug D — Excel Blob Columns — FIXED in v0.0.3
+`_truncate_blobs()` applied to all `Data_*` sheets in `parseiq/pipeline.py`.
+Strings > 120 chars starting with `{` or `[` are truncated with `…`.
+
+---
+
+### Issue E — pip install Environment Collision  *(open — needs PR)*
+**Symptom:** Running `pip install parseiq` into an existing project virtual environment can
+downgrade or conflict with user's pinned dependencies (pandas, openpyxl, etc.).
+
+**Recommended workaround for users (available now):**
+```bash
+# Option 1 — pipx (cleanest, zero pollution)
+pipx install parseiq
+parseiq analyze data.json
+
+# Option 2 — dedicated venv
+python -m venv .parseiq-env
+source .parseiq-env/bin/activate   # Windows: .parseiq-env\Scripts\activate
+pip install parseiq
+parseiq analyze data.json
+```
+
+**Long-term fix:** Relax version pins in `pyproject.toml` to wide ranges
+(`pandas>=1.5`, `openpyxl>=3.0`) and add a `[tool.parseiq]` isolation note to the docs.
+
+**File:** `pyproject.toml`, `README.md`
+**Label:** `enhancement` `documentation`
+
+---
+
+### Issue F — NEGATIVE_VALUES_DETECTED False Positives in Financial Data  *(open — needs PR)*
+**Symptom:** Columns like `var_1d_99_pct`, `max_drawdown_pct`, `equity_shock`, `cfi_cr` are
+legitimately negative by financial convention (VaR, drawdown, capex outflows) but are flagged
+as `NEGATIVE_VALUES_DETECTED` anomalies, lowering quality scores and producing noisy issues.
+
+**Suggested fix:** Allow users to pass a domain hint or an allowlist of columns/patterns that
+are expected to be negative (e.g. `--allow-negatives "var_*,drawdown*,cf*_cr"`), or add a
+built-in heuristic that suppresses the flag on columns whose name contains `var`, `drawdown`,
+`shock`, `cfi`, `cff`.
+
+**File:** `parseiq/step1_metadata_extractor/extractor.py` — anomaly detection section
+**Label:** `enhancement` `good first issue`
+
+---
+
+### Issue G — Cross-Level Range Violations Not Detected in Local Mode  *(open — needs PR)*
+**Symptom:** When a valid-range spec lives at one nesting level (e.g. `temp_range_c: [2, 8]`
+inside a zone object) and the breaching value lives 4 levels deeper inside `tracking_events`,
+ParseIQ flattens them into separate tables with no link. The breach is never flagged in
+`--no-llm` mode.  Same problem in IoT/manufacturing JSON: `normal_range: [0, 10]` lives in the
+`sensors` table while the breaching reading `18.9` lives in the child `readings` table.
+
+**Affected test cases:** TC-05 (supply chain cold-chain), TC-08 (IoT manufacturing)
+
+**Suggested fix:** After FK-injected parent-child table pairs are built, walk parent columns
+whose name ends in `_range` or `_limit` and compare them against the child table's numeric
+columns that share the same FK prefix.  Flag `RANGE_VIOLATION_DETECTED` anomaly when any
+child value falls outside the parent's `[min, max]` pair.
+
+**File:** `parseiq/step1_metadata_extractor/extractor.py` — post-extraction cross-table check
+**Label:** `enhancement` `good first issue`
+
+---
+
+### Issue H — Cross-Table Constraint Violations Not Detected in Local Mode  *(open — needs PR)*
+**Symptom:** Constraints that span two separately extracted tables (e.g. `claimed_amount` in
+`claims[]` vs `sum_assured` in `policies[]`) are undetectable in `--no-llm` mode because
+ParseIQ produces flat, unjoined tables.  The FK key is injected but no join + comparison is
+ever performed.
+
+**Affected test cases:** TC-09 (insurance) — `claimed_amount: 450000 > sum_assured: 300000`
+
+**Suggested fix:** Allow users to define cross-table constraint rules in a YAML sidecar file:
+```yaml
+constraints:
+  - left_table: claims
+    left_col: claimed_amount
+    right_table: policies
+    right_col: sum_assured
+    join_key: policy_id
+    rule: left <= right
+    anomaly: CONSTRAINT_VIOLATION
+```
+ParseIQ reads the sidecar and applies the join + comparison after extraction.
+
+**File:** `parseiq/step1_metadata_extractor/extractor.py`, new `parseiq/rule_engine.py`
+**Label:** `enhancement`
+
+---
+
+### Issue I — Scale/Domain Violations Not Detected (e.g. Marks > 100)  *(open — needs PR)*
+**Symptom:** When a numeric value is arithmetically coherent but semantically out-of-scale
+(e.g. `total: 128` in a 100-point marks system), ParseIQ does not flag it.  It sees an integer
+and has no concept of the domain upper bound.
+
+**Affected test cases:** TC-04 (university) — `mid_term(38) + end_term(72) + assignment(18) = 128`
+
+**Suggested fix:** Allow a `max_value` annotation on the parent object (e.g. `max_marks: 100`)
+or a YAML rule (`marks.total <= 100`).  Without this, detection requires LLM mode.
+
+**File:** `parseiq/step1_metadata_extractor/extractor.py`
+**Label:** `enhancement`
+
+---
+
+### Issue J — Missing Sibling Key Not Detected When Parent is a Dict (Not Array)  *(open — needs PR)*
+**Symptom:** When a parent object has two sibling dict keys (e.g. `fy2025: {...}` and
+`fy2024: {...}`) and one record is missing `fy2024` entirely, ParseIQ does not flag it.
+The key absence is a structural gap (missing fiscal year), but because the parent is a dict
+(not an array-of-dicts), ParseIQ never compares key presence across records.
+
+**Affected test cases:** TC-10 (conglomerate) — `financials.fy2024` missing for one subsidiary
+
+**Suggested fix:** After deep-flattening, collect all `__`-prefixed column names produced per
+record.  For records in the same table that are missing columns present in other records,
+raise `HIGH_NULL_RATE` only if the column represents a known time-series key (heuristic:
+column name ends with 4 digits that look like a year).
+
+**File:** `parseiq/file_loader/loader.py`, `parseiq/step1_metadata_extractor/extractor.py`
+**Label:** `enhancement`

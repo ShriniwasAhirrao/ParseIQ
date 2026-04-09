@@ -908,11 +908,16 @@ class MetadataExtractor:
         attr_scores = [attr_data.get("quality_score", 0) for attr_data in attributes.values()]
         base_score = np.mean(attr_scores) if attr_scores else 0
 
-        # Additional table-level penalty: 3 points per anomaly across all attributes
-        total_anomalies = sum(
-            len(attr_data.get("anomaly_flags", [])) for attr_data in attributes.values()
+        # Additional table-level penalty based on anomaly rate (capped at 20 pts)
+        # Using a rate-based approach so wide tables with many columns are not
+        # over-penalised — the per-attribute scores already deduct for each flag.
+        total_attrs = len(attributes)
+        anomalous_attrs = sum(
+            1 for attr_data in attributes.values()
+            if attr_data.get("anomaly_flags")
         )
-        base_score -= total_anomalies * 3
+        anomaly_rate = anomalous_attrs / total_attrs if total_attrs else 0
+        base_score -= min(anomaly_rate * 20, 20)
 
         return max(0.0, min(100.0, round(base_score, 2)))
 

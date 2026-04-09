@@ -186,13 +186,25 @@ class FileLoader:
                             flat_rec[key] = None
                         # else: skip — sub-columns will be NaN for this row
                     elif isinstance(value, dict):
-                        has_complex = any(isinstance(v, (dict, list)) for v in value.values())
-                        if not has_complex:
-                            # Flatten shallow embedded object inline with __ separator
+                        has_list_of_dicts = any(
+                            isinstance(v, list) and v and all(isinstance(i, dict) for i in v)
+                            for v in value.values()
+                        )
+                        has_nested_dict = any(isinstance(v, dict) for v in value.values())
+                        if not has_nested_dict and not has_list_of_dicts:
+                            # Shallow object — flatten inline with __ separator
                             for sub_key, sub_val in value.items():
                                 flat_rec[f"{key}__{sub_key}"] = sub_val
                         else:
-                            flat_rec[key] = json.dumps(value, default=str)
+                            # Deep/complex object — recurse so child arrays become tables
+                            self._flatten_nested_json(
+                                value,
+                                path_elements + [key],
+                                tables
+                            )
+                            # Recursively flatten ALL scalar leaves into this record
+                            for leaf_key, leaf_val in self._deep_flatten_scalars(value, key).items():
+                                flat_rec[leaf_key] = leaf_val
                     elif isinstance(value, list):
                         if value and all(isinstance(v, dict) for v in value):
                             # Array-of-objects → becomes a child table
@@ -229,6 +241,25 @@ class FileLoader:
             tables = {k: v for k, v in tables.items() if not k.startswith('__path__')}
 
         return tables
+
+    def _deep_flatten_scalars(self, obj: Any, prefix: str) -> Dict[str, Any]:
+        """Recursively collect all scalar leaves from a nested dict/list into
+        a flat dict with '__'-joined keys.  List-of-dicts are skipped (they
+        become child tables).  Primitive lists are joined as comma-separated strings."""
+        result: Dict[str, Any] = {}
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                full_key = f"{prefix}__{k}"
+                if isinstance(v, dict):
+                    result.update(self._deep_flatten_scalars(v, full_key))
+                elif isinstance(v, list):
+                    if v and all(isinstance(i, dict) for i in v):
+                        pass  # list-of-dicts → child table, skip inlining
+                    else:
+                        result[full_key] = ', '.join(str(i) for i in v) if v else ''
+                else:
+                    result[full_key] = v
+        return result
 
     def _get_record_id(self, record: Dict, table_name: str) -> Any:
         """Return the best candidate ID value from a record for FK injection.

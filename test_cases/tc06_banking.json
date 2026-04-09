@@ -1,0 +1,120 @@
+{
+  "bank": "IndiaFirst Commercial Bank",
+  "license": "SBI-CLONE-0042",
+  "regions": [
+    {
+      "region_id": "REG-WEST",
+      "name": "Western Region",
+      "branches": [
+        {
+          "branch_id": "BRN-001",
+          "name": "Andheri West Branch",
+          "ifsc": "IFCB0001001",
+          "city": "Mumbai",
+          "manager": {
+            "emp_id": "MGR-001",
+            "name": "Priya Desai",
+            "tenure_years": 8
+          },
+          "accounts": [
+            {
+              "account_no": "ACC-10001",
+              "type": "SAVINGS",
+              "holder": "Amit Sharma",
+              "balance_inr": 245000,
+              "kyc_status": "VERIFIED",
+              "opened_date": "2018-03-15",
+              "loans": [
+                {
+                  "loan_id": "LN-50001",
+                  "type": "HOME_LOAN",
+                  "sanctioned_amount": 5000000,
+                  "outstanding_amount": 3800000,
+                  "roi_pct": 8.5,
+                  "tenure_months": 240,
+                  "emi": 43500,
+                  "disbursement_date": "2019-05-01",
+                  "maturity_date": "2039-05-01",
+                  "status": "ACTIVE",
+                  "collateral": {
+                    "type": "Property",
+                    "description": "2BHK Flat, Andheri West",
+                    "valuation_inr": 8500000,
+                    "valuation_date": "2019-04-15",
+                    "lien_marked": true
+                  },
+                  "repayment_schedule": [
+                    {
+                      "month": 1,
+                      "emi_date": "2019-06-01",
+                      "principal": 8833,
+                      "interest": 34667,
+                      "status": "PAID"
+                    },
+                    {
+                      "month": 2,
+                      "emi_date": "2019-07-01",
+                      "principal": 8896,
+                      "interest": 34604,
+                      "status": "PAID"
+                    },
+                    {
+                      "month": 3,
+                      "emi_date": "2019-08-01",
+                      "principal": 8959,
+                      "interest": 34541,
+                      "status": "PAID"
+                    }
+                  ],
+                  "risk_flags": {
+                    "dpd_30": false,
+                    "dpd_60": false,
+                    "dpd_90": false,
+                    "npa_classified": false,
+                    "restructured": false
+                  }
+                }
+              ]
+            },
+            {
+              "account_no": "ACC-10002",
+              "type": "CURRENT",
+              "holder": "Mehta Traders Pvt Ltd",
+              "balance_inr": 1250000,
+              "kyc_status": "PENDING",
+              "opened_date": "2022-08-01",
+              "loans": [
+                {
+                  "loan_id": "LN-50002",
+                  "type": "CC_LIMIT",
+                  "sanctioned_amount": 2000000,
+                  "outstanding_amount": -150000,
+                  "roi_pct": 185.0,
+                  "tenure_months": 12,
+                  "emi": null,
+                  "disbursement_date": "2025-01-01",
+                  "maturity_date": "2025-12-31",
+                  "status": "OVERDUE",
+                  "collateral": {
+                    "description": "Stock Pledge",
+                    "valuation_inr": 3000000,
+                    "valuation_date": "2025-01-01",
+                    "lien_marked": false
+                  },
+                  "repayment_schedule": [],
+                  "risk_flags": {
+                    "dpd_30": true,
+                    "dpd_60": true,
+                    "dpd_90": false,
+                    "npa_classified": false,
+                    "restructured": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

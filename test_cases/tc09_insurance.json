@@ -1,0 +1,168 @@
+{
+  "insurer": "Bharat General Insurance",
+  "license_no": "IRDAI/HLT/BGI/P-H/V.I/175/13-14",
+  "product_lines": [
+    {
+      "product_id": "PROD-HEALTH-01",
+      "name": "HealthShield Plus",
+      "category": "Health Insurance",
+      "underwriting_rules": {
+        "min_age": 18,
+        "max_age": 65,
+        "max_sum_assured": 10000000,
+        "exclusions": [
+          "Pre-existing within 2 years",
+          "Cosmetic Surgery",
+          "Dental"
+        ],
+        "loading_factors": [
+          {
+            "condition": "Diabetes",
+            "loading_pct": 20
+          },
+          {
+            "condition": "Hypertension",
+            "loading_pct": 15
+          },
+          {
+            "condition": "Obesity_BMI>30",
+            "loading_pct": 25
+          }
+        ]
+      },
+      "policies": [
+        {
+          "policy_id": "POL-001-2024",
+          "holder_name": "Sudhir Kulkarni",
+          "sum_assured": 500000,
+          "annual_premium": 12500,
+          "policy_start": "2024-01-01",
+          "policy_end": "2024-12-31",
+          "status": "ACTIVE",
+          "renewal_count": 3,
+          "loading_applied": {
+            "Diabetes": 20
+          },
+          "nominee": {
+            "name": "Sunita Kulkarni",
+            "relation": "Spouse"
+          },
+          "premium_payments": [
+            {
+              "receipt_no": "RCP-001",
+              "date": "2024-01-01",
+              "amount": 12500,
+              "mode": "Annual",
+              "status": "PAID"
+            }
+          ],
+          "claims": [
+            {
+              "claim_id": "CLM-0001",
+              "intimation_date": "2024-06-15",
+              "type": "Hospitalization",
+              "hospital": "Ruby Hall Clinic, Pune",
+              "admission_date": "2024-06-10",
+              "discharge_date": "2024-06-14",
+              "diagnosis": "Appendicitis",
+              "icd_code": "K37",
+              "claimed_amount": 95000,
+              "approved_amount": 88000,
+              "rejected_amount": 7000,
+              "rejection_reason": "Non-medical expenses",
+              "status": "SETTLED",
+              "assessment": {
+                "assessor_id": "ASR-021",
+                "assessed_on": "2024-06-20",
+                "documents_verified": [
+                  "Discharge Summary",
+                  "Bills",
+                  "Lab Reports"
+                ],
+                "fraud_score": 12.4,
+                "risk_flag": false,
+                "itemized_review": [
+                  {
+                    "item": "Surgery",
+                    "billed": 55000,
+                    "approved": 55000,
+                    "remark": "Approved"
+                  },
+                  {
+                    "item": "Room Charges",
+                    "billed": 20000,
+                    "approved": 18000,
+                    "remark": "Capped at standard room"
+                  },
+                  {
+                    "item": "Pharmacy",
+                    "billed": 13000,
+                    "approved": 13000,
+                    "remark": "Approved"
+                  },
+                  {
+                    "item": "Misc",
+                    "billed": 7000,
+                    "approved": 0,
+                    "remark": "Non-medical rejected"
+                  }
+                ]
+              },
+              "payout": {
+                "payout_id": "PAY-0001",
+                "date": "2024-06-25",
+                "amount": 88000,
+                "mode": "NEFT",
+                "utr": "NEFT20240625XYZ",
+                "beneficiary": "Sudhir Kulkarni"
+              }
+            }
+          ]
+        },
+        {
+          "policy_id": "POL-002-2024",
+          "holder_name": "Geeta Iyer",
+          "sum_assured": 300000,
+          "annual_premium": -8200,
+          "policy_start": "2024-03-01",
+          "policy_end": "2025-02-28",
+          "status": "LAPSED",
+          "renewal_count": 0,
+          "nominee": {
+            "name": "Ravi Iyer",
+            "relation": "Husband"
+          },
+          "premium_payments": [],
+          "claims": [
+            {
+              "claim_id": "CLM-0002",
+              "intimation_date": "2024-09-10",
+              "type": "Hospitalization",
+              "hospital": "Apollo Hospitals, Chennai",
+              "admission_date": "2024-09-05",
+              "discharge_date": "2024-09-09",
+              "diagnosis": "Dengue Fever",
+              "icd_code": "A90",
+              "claimed_amount": 450000,
+              "approved_amount": 0,
+              "rejected_amount": 450000,
+              "rejection_reason": "Policy lapsed",
+              "status": "REJECTED",
+              "assessment": {
+                "assessor_id": "ASR-022",
+                "assessed_on": "2024-09-15",
+                "documents_verified": [
+                  "Discharge Summary"
+                ],
+                "fraud_score": 78.9,
+                "risk_flag": true,
+                "itemized_review": []
+              },
+              "payout": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

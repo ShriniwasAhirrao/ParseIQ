@@ -1,6 +1,7 @@
 import json
 import re
 import logging
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 import requests
 from datetime import datetime, date
@@ -102,9 +103,9 @@ class LLMEnricher:
 
             template = escape_json_examples(template)
             
-            self.logger.info(f"Loaded prompt template from {template_path}")
+            self.logger.info(f"Loaded prompt template from {Path(template_path).name}")
             if self.debug:
-                print(f"🔍 DEBUG: Loaded prompt template from {template_path}")
+                print(f"🔍 DEBUG: Loaded prompt template from {Path(template_path).name}")
             return template
         except FileNotFoundError:
             error_msg = f"Prompt template not found at {template_path}. Please ensure the template file exists."

@@ -1,0 +1,98 @@
+{
+  "university": "Bharat Institute of Technology",
+  "accreditation": "NAAC A+",
+  "established": 1998,
+  "schools": [
+    {
+      "school_id": "SCH-01",
+      "name": "School of Engineering",
+      "programs": [
+        {
+          "program_id": "PROG-CS",
+          "name": "B.Tech CSE",
+          "duration_years": 4,
+          "courses": [
+            {
+              "course_id": "CS301",
+              "name": "Data Structures",
+              "credits": 4,
+              "semester": 3,
+              "faculty": "Prof. Dinesh Kumar",
+              "students_enrolled": [
+                {
+                  "student_id": "STU-001",
+                  "name": "Ananya Singh",
+                  "marks": {
+                    "mid_term": 38,
+                    "end_term": 72,
+                    "assignment": 18,
+                    "total": 128
+                  },
+                  "attendance_pct": 87.5,
+                  "feedback": {
+                    "clarity": 4,
+                    "engagement": 5,
+                    "relevance": 4
+                  }
+                },
+                {
+                  "student_id": "STU-002",
+                  "name": "Rohan Bhat",
+                  "marks": {
+                    "mid_term": 22,
+                    "end_term": 41,
+                    "assignment": 14,
+                    "total": 77
+                  },
+                  "attendance_pct": 63.2,
+                  "feedback": {
+                    "clarity": 3,
+                    "engagement": 2,
+                    "relevance": 3
+                  }
+                },
+                {
+                  "student_id": "STU-003",
+                  "name": "Preet Chawla",
+                  "marks": {
+                    "mid_term": 45,
+                    "end_term": 80,
+                    "assignment": 20,
+                    "total": 145
+                  },
+                  "attendance_pct": null,
+                  "feedback": null
+                }
+              ]
+            },
+            {
+              "course_id": null,
+              "name": "Computer Networks",
+              "credits": 3,
+              "semester": 5,
+              "faculty": "Prof. Anil Rao",
+              "students_enrolled": [
+                {
+                  "student_id": "STU-001",
+                  "name": "Ananya Singh",
+                  "marks": {
+                    "mid_term": 40,
+                    "end_term": 68,
+                    "assignment": 17,
+                    "total": 125
+                  },
+                  "attendance_pct": 91.0,
+                  "feedback": {
+                    "clarity": 5,
+                    "engagement": 4,
+                    "relevance": 5
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

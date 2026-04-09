@@ -1,0 +1,123 @@
+{
+  "network_id": "SCN-INDIA-01",
+  "operator": "SwiftRoute Logistics",
+  "warehouses": [
+    {
+      "warehouse_id": "WH-MUM",
+      "location": "Mumbai",
+      "capacity_sqft": 80000,
+      "temperature_controlled": true,
+      "inventory_zones": [
+        {
+          "zone_id": "Z01",
+          "zone_type": "Cold Storage",
+          "temp_range_c": [
+            2,
+            8
+          ],
+          "sku_batches": [
+            {
+              "batch_id": "BAT-001",
+              "sku": "PHARMA-AMOX500",
+              "quantity_units": 50000,
+              "expiry": "2026-12-31",
+              "current_temp_c": 4.5,
+              "weight_kg": 250,
+              "supplier": {
+                "supplier_id": "SUP-01",
+                "name": "MedChem India",
+                "location": "Hyderabad",
+                "lead_time_days": 7,
+                "quality_score": 94.2,
+                "certifications": [
+                  "ISO 9001",
+                  "GMP",
+                  "WHO-GMP"
+                ]
+              },
+              "shipments": [
+                {
+                  "shipment_id": "SHP-0011",
+                  "dispatch_date": "2025-10-01",
+                  "delivery_date": "2025-10-05",
+                  "status": "DELIVERED",
+                  "carrier": "ColdEx",
+                  "route": [
+                    "Mumbai",
+                    "Nashik",
+                    "Aurangabad"
+                  ],
+                  "tracking_events": [
+                    {
+                      "timestamp": "2025-10-01T08:00:00",
+                      "location": "Mumbai",
+                      "temp_c": 4.2,
+                      "status": "Picked Up"
+                    },
+                    {
+                      "timestamp": "2025-10-03T14:00:00",
+                      "location": "Nashik",
+                      "temp_c": 10.8,
+                      "status": "In Transit"
+                    },
+                    {
+                      "timestamp": "2025-10-05T11:00:00",
+                      "location": "Aurangabad",
+                      "temp_c": 5.1,
+                      "status": "Delivered"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "batch_id": "BAT-002",
+              "sku": "PHARMA-PARA650",
+              "quantity_units": 100000,
+              "expiry": "2027-06-30",
+              "current_temp_c": 3.9,
+              "weight_kg": -500,
+              "supplier": {
+                "supplier_id": "SUP-02",
+                "name": "Sun Pharma",
+                "location": "Mumbai",
+                "lead_time_days": 3,
+                "quality_score": 97.8,
+                "certifications": [
+                  "ISO 9001",
+                  "GMP"
+                ]
+              },
+              "shipments": [
+                {
+                  "shipment_id": "SHP-0022",
+                  "dispatch_date": "2025-11-15",
+                  "delivery_date": "2025-11-17",
+                  "status": "DELIVERED",
+                  "route": [
+                    "Mumbai",
+                    "Pune"
+                  ],
+                  "tracking_events": [
+                    {
+                      "timestamp": "2025-11-15T09:00:00",
+                      "location": "Mumbai",
+                      "temp_c": 4.0,
+                      "status": "Picked Up"
+                    },
+                    {
+                      "timestamp": "2025-11-17T15:00:00",
+                      "location": "Pune",
+                      "temp_c": 4.1,
+                      "status": "Delivered"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,204 @@ Development sessions, decisions, and technical notes in reverse-chronological or
 
 ---
 
+## Session: 2026-04-09 — Deep JSON Flattening + Quality Score + Bug Fixes
+
+### Overview
+Tested ParseIQ on `input/input_data.json` — a deeply-nested financial JSON with 5+ levels of
+nesting (portfolios → holdings → financials → income_statement → fy2025 → margins).
+Identified and fixed 6 bugs, overhauled the loader's dict-handling strategy, and wrote full
+community-facing documentation (TODO.md, CONTRIBUTING.md) for every known issue.
+
+### Bug 1 — Deep JSON Objects Stringified as Blobs (`parseiq/file_loader/loader.py`)
+
+**Problem:** Any dict field that itself contained nested dicts or arrays was JSON-stringified
+into a single blob column (`json.dumps(value, default=str)`).  This caused:
+- `financials`, `ml_signals`, `risk_framework`, `head.performance` → single unreadable cells
+- Child arrays inside those dicts never extracted as tables (`stress_scenarios`, `top_signals`)
+- Excel Data sheets with extremely wide, garbled blob columns
+
+**Fix:** Replaced the stringify branch with a two-step approach:
+1. Recursive call to `_flatten_nested_json(value, path_elements + [key], tables)` — extracts
+   any array-of-dicts found at any depth as a child table.
+2. `_deep_flatten_scalars(value, key)` — new helper that walks the dict tree collecting every
+   scalar leaf into the parent record with `__`-joined key paths.
+
+```python
+def _deep_flatten_scalars(self, obj, prefix):
+    result = {}
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            full_key = f"{prefix}__{k}"
+            if isinstance(v, dict):
+                result.update(self._deep_flatten_scalars(v, full_key))
+            elif isinstance(v, list):
+                if not (v and isinstance(v[0], dict)):  # primitive list → join
+                    result[full_key] = ', '.join(str(i) for i in v) if v else ''
+            else:
+                result[full_key] = v
+    return result
+```
+
+**Result:**
+- `departments` went from 8 → 15 attributes (now includes `head__performance__fy2024__rating`, etc.)
+- `holdings` went from 17 → 62 attributes (all `financials__*` columns properly extracted)
+- `portfolios` went from 24 → 31 attributes (sector breakdown, ML signal fields)
+- `stress_scenarios` and `top_signals` now extracted as proper tables (were missing entirely)
+
+### Bug 2 — Quality Score Bottoming at 0 on Wide Tables (`parseiq/step1_metadata_extractor/extractor.py`)
+
+**Problem:** `_calculate_quality_score()` used: `base_score -= total_anomalies × 3`.
+After the deep-flatten fix, `holdings` had 62 columns with ~40 anomalies (HIGH_NULL_RATE on
+asymmetric schema between RELIANCE and HDFCBANK). `40 × 3 = 120` → `max(0, 50 - 120) = 0`.
+
+**Fix:** Rate-based penalty capped at 20 points:
+```python
+anomaly_rate = anomalous_attrs / total_attrs
+base_score -= min(anomaly_rate * 20, 20)
+```
+Per-attribute scores already penalise each flag (15 pts/flag). The table-level penalty now
+only signals the fraction of affected attributes, not the raw count.
+
+**Result:** `holdings` 0 → 61, `portfolios` 15 → 62, `avg_quality` 76.7 → 87.4.
+
+### Bug 3 — Duplicate Table Processing (`parseiq/pipeline.py`)
+
+`visited_tables: set` guard added to both the Data/Meta/Quality sheet builder loop and the
+`99_Issues` section loop. Pure defensive measure — Python dicts can't have duplicate keys,
+but guards against any edge case where the same table name might be yielded twice.
+
+### Bug 4 — Excel Blob Columns (`parseiq/pipeline.py`)
+
+```python
+def _truncate_blobs(val, limit=120):
+    if isinstance(val, str) and len(val) > limit and (val.startswith("{") or val.startswith("[")):
+        return val[:limit] + "…"
+    return val
+
+df = df.apply(lambda col: col.map(_truncate_blobs))
+```
+Used `df.apply(col.map(...))` instead of `applymap` to avoid the pandas 2.1 deprecation warning.
+
+### Bug 5 — Context Bleed Between Tables
+
+Fixed as a side-effect of Bug 1 fix. Root cause: complex dicts being stringified produced
+blob strings that looked like attributes from other JSON contexts when the parent record was
+added to a sibling table.
+
+### Bug 6 — Privacy: Prompt Template Path Logged in Full (`parseiq/step2_llm_enricher/llm_agent.py`)
+
+```python
+# Before
+self.logger.info(f"Loaded prompt template from {template_path}")
+# After
+self.logger.info(f"Loaded prompt template from {Path(template_path).name}")
+```
+Added `from pathlib import Path` import.
+
+### Other Fixes
+
+- `00_Summary` Top_Issues column: replaced `"None"` string → empty string for clean tables
+- `tests/test_comprehensive.py` line 482: updated expected score for rate-based penalty
+
+### Verification
+
+Tested against `input/input_data.json` (deeply nested: org → dept → head → performance → fy2025):
+- 10 tables extracted: `departments`, `team`, `stress_scenarios`, `portfolios`, `holdings`,
+  `transactions`, `rebalancing_history`, `actions_taken`, `top_signals`, `changelog`
+- 34 Excel sheets generated (10 × 3 + 4 overview)
+- No blob strings in any Data_ sheet
+- No duplicate table processing
+- No context bleed between tables
+- Quality scores: avg 87.4/100
+- 159/159 tests passing
+
+### Community Documentation Written
+
+- `TODO.md` — "Known Bugs — Open for Community PRs" section with 5 issues (A–E):
+  Duplicate loop, Context bleed, Inconsistent flattening, Excel blobs, pip env collision.
+- `CONTRIBUTING.md` — "Good First Issues — Ready for PRs" section mirroring each bug
+  with exact file/line and fix guidance.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `parseiq/file_loader/loader.py` | Deep dict recursion + `_deep_flatten_scalars()` helper |
+| `parseiq/step1_metadata_extractor/extractor.py` | Rate-based quality score penalty |
+| `parseiq/step2_llm_enricher/llm_agent.py` | Privacy: log filename only, added Path import |
+| `parseiq/pipeline.py` | `visited_tables` guard, `_truncate_blobs()`, `'None'` → `''` fix |
+| `TODO.md` | Known Bugs section (5 issues A–E) for community PRs |
+| `CONTRIBUTING.md` | Good First Issues section with fix guidance per bug |
+| `tests/test_comprehensive.py` | Updated quality score assertion (87 → 70) |
+| `CHANGELOG.md` | v0.0.3 entry |
+| `WORKLOG.md` | This entry |
+
+### Test Results
+- 159/159 passing
+
+---
+
+## Session: 2026-04-09 — Multi-Domain Test Case Suite (TC-01 to TC-10)
+
+### Overview
+Created a 10-file test case suite covering real-world enterprise data domains to validate
+ParseIQ's anomaly detection breadth.  Each file contains injected anomalies spanning the full
+range of ParseIQ's 8 detection types plus several classes of anomaly that require LLM mode or
+future rule-engine support.  Performed a systematic gap analysis: what ParseIQ --no-llm catches
+vs. what it misses and why.
+
+### Test Cases Created (`test_cases/`)
+
+| File | Domain | Key Injected Anomalies |
+|---|---|---|
+| `tc01_ecommerce.json` | E-Commerce orders | NEGATIVE_VALUES (qty, weight), future date, mixed types |
+| `tc02_hr.json` | HR / Payroll | NULL salary, negative bonus, duplicate employee_id |
+| `tc03_hospital.json` | Hospital / EMR | Negative dosage, future admission date, missing fields |
+| `tc04_university.json` | University marks | Total marks = 128 (scale violation, > 100 cap) |
+| `tc05_supplychain.json` | Cold-chain logistics | Temp 10.8 °C breaches zone range [2, 8] (cross-level) |
+| `tc06_banking.json` | Banking / KYC | Negative balance, future date, pattern inconsistency |
+| `tc07_social_media.json` | Social media analytics | Negative likes, NULL engagement, high avg_length |
+| `tc08_iot_manufacturing.json` | IoT sensor readings | Reading 18.9 breaches sensor normal_range [0, 10] |
+| `tc09_insurance.json` | Insurance policies | claimed_amount > sum_assured (cross-table), missing field |
+| `tc10_conglomerate.json` | Conglomerate financials | Missing fy2024 key for one subsidiary (structural gap) |
+
+### Gap Analysis — What ParseIQ --no-llm Catches
+
+| Anomaly Class | ParseIQ Detects? | Reason |
+|---|---|---|
+| NEGATIVE_VALUES (qty, weight, dosage, premium, likes) | ✅ Yes | Pure numeric check |
+| HIGH_NULL_RATE (missing fields across records) | ✅ Yes | Key presence comparison |
+| AVG_LENGTH_TOO_LONG (deep blob fields) | ✅ Yes | String length heuristic |
+| Date format inconsistency (dd/mm/yyyy vs ISO) | ⚠️ LLM only | Needs pattern recognition |
+| Cross-level range violation (temp > zone range) | ❌ No | No parent-child constraint join |
+| Cross-table constraint violation (claim > sum_assured) | ❌ No | Tables not joined post-extraction |
+| Scale/domain violation (marks total > 100) | ❌ No | No domain upper-bound concept |
+| Missing sibling dict key (fy2024 absent) | ❌ No | Dict gaps not compared across records |
+| Semantic fraud/ESG flags | ❌ No | LLM-only |
+
+### Bugs Documented
+
+Four new limitation issues added to `TODO.md` and `CONTRIBUTING.md`:
+
+- **Issue G** — Cross-level range violations (TC-05, TC-08): `temp_range_c` and the breaching
+  value live in different flattened tables; no link is maintained post-extraction.
+- **Issue H** — Cross-table constraint violations (TC-09): `claimed_amount > sum_assured`
+  requires a FK join that ParseIQ never performs in local mode.
+- **Issue I** — Scale/domain violations (TC-04): marks total `128` on a 100-point system is
+  arithmetically correct but semantically invalid; requires a domain upper-bound rule.
+- **Issue J** — Missing sibling dict key (TC-10): structural gap where `fy2024` is absent for
+  one record but present for others; dict key-set comparison not implemented.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `test_cases/tc01_ecommerce.json` through `tc10_conglomerate.json` | New 10-file test suite |
+| `test_cases/write_tc06_10.py` | Generator script for TC-06 to TC-10 |
+| `TODO.md` | Issues G–J added (cross-level range, cross-table constraint, scale violation, missing key) |
+
+---
+
 ## Session: 2026-04-06 — Multi-Provider LLM + Output Sheet Overhaul
 
 ### Overview
@@ -286,3 +484,11 @@ See CHANGELOG 0.0.1 for full table.
 | Quality sheet wide format (hard to read) | Fixed | 2026-04-06 |
 | Only OpenRouter supported | Fixed | 2026-04-06 |
 | UnicodeEncodeError on Windows CLI | Fixed | 2026-04-06 |
+| Nested dicts stringified as blob columns | Fixed | 2026-04-09 |
+| stress_scenarios / top_signals not extracted | Fixed | 2026-04-09 |
+| Quality score = 0 on wide tables | Fixed | 2026-04-09 |
+| Duplicate table processing in Excel output | Fixed | 2026-04-09 |
+| Context bleed between table analyses | Fixed | 2026-04-09 |
+| Excel blob columns (unreadable wide cells) | Fixed | 2026-04-09 |
+| 'None' string in 00_Summary Top_Issues | Fixed | 2026-04-09 |
+| Prompt template full path logged | Fixed | 2026-04-09 |

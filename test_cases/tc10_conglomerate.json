@@ -1,0 +1,343 @@
+{
+  "group_id": "GRP-BHARAT-HOLDINGS",
+  "group_name": "Bharat Enterprises Conglomerate",
+  "incorporated": "1972-08-15",
+  "group_structure": {
+    "holding_company": "Bharat Holdings Ltd",
+    "total_subsidiaries": 14,
+    "listed_entities": 4,
+    "aum_group_inr_cr": 185000
+  },
+  "subsidiaries": [
+    {
+      "entity_id": "ENT-01",
+      "name": "Bharat Steel Ltd",
+      "sector": "Manufacturing",
+      "listed": true,
+      "bse_code": "500103",
+      "ownership_pct": 68.4,
+      "financials": {
+        "fy2025": {
+          "revenue_cr": 28500,
+          "ebitda_cr": 5130,
+          "pat_cr": 2280,
+          "total_assets_cr": 42000,
+          "total_debt_cr": 12000,
+          "ratios": {
+            "roe": 12.4,
+            "roce": 14.8,
+            "de_ratio": 0.68,
+            "current_ratio": 1.35
+          }
+        },
+        "fy2024": {
+          "revenue_cr": 25800,
+          "ebitda_cr": 4386,
+          "pat_cr": 1935,
+          "total_assets_cr": 38000,
+          "total_debt_cr": 11500,
+          "ratios": {
+            "roe": 11.2,
+            "roce": 13.1,
+            "de_ratio": 0.72,
+            "current_ratio": 1.28
+          }
+        }
+      },
+      "plants": [
+        {
+          "plant_id": "PLT-01",
+          "location": "Raipur, Chhattisgarh",
+          "capacity_mtpa": 3.5,
+          "utilization_pct": 82.0,
+          "products": [
+            "Hot Rolled Coils",
+            "Cold Rolled Sheets",
+            "Galvanized Strips"
+          ],
+          "capex_projects": [
+            {
+              "project_id": "CPX-001",
+              "name": "Blast Furnace Expansion",
+              "budget_cr": 1800,
+              "spent_cr": 1200,
+              "completion_pct": 68,
+              "expected_completion": "2026-09-30",
+              "status": "IN_PROGRESS",
+              "milestones": [
+                {
+                  "name": "Foundation",
+                  "due": "2025-03-31",
+                  "completed": true,
+                  "variance_days": 0
+                },
+                {
+                  "name": "Structure",
+                  "due": "2025-09-30",
+                  "completed": true,
+                  "variance_days": 45
+                },
+                {
+                  "name": "Equipment",
+                  "due": "2026-03-31",
+                  "completed": false,
+                  "variance_days": null
+                },
+                {
+                  "name": "Commissioning",
+                  "due": "2026-09-30",
+                  "completed": false,
+                  "variance_days": null
+                }
+              ]
+            }
+          ],
+          "esg_metrics": {
+            "carbon_emission_mt": 1240000,
+            "energy_per_ton_gj": 18.4,
+            "water_recycling_pct": 72.1,
+            "social": {
+              "employees": 8400,
+              "contract_workers": 3200,
+              "safety": {
+                "ltifr": 0.42,
+                "fatalities_ytd": 1,
+                "near_misses": 28,
+                "incidents": [
+                  {
+                    "date": "2026-01-18",
+                    "type": "Fatal",
+                    "location": "Blast Furnace Area",
+                    "investigation_status": "ONGOING"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "legal_cases": [
+        {
+          "case_id": "LEGAL-001",
+          "court": "High Court, Raipur",
+          "type": "Labour Dispute",
+          "filed_date": "2023-05-10",
+          "claim_amount_cr": 12.5,
+          "status": "PENDING",
+          "last_hearing": "2026-03-15",
+          "next_hearing": "2026-06-20",
+          "external_counsel": "Sharma & Associates"
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-02",
+      "name": "Bharat FinTech Services",
+      "sector": "Financial Services",
+      "listed": false,
+      "ownership_pct": 100.0,
+      "financials": {
+        "fy2025": {
+          "revenue_cr": 4200,
+          "ebitda_cr": 1470,
+          "pat_cr": 980,
+          "total_assets_cr": 18000,
+          "total_debt_cr": 8500,
+          "ratios": {
+            "roe": 18.2,
+            "roce": 21.4,
+            "de_ratio": 0.89,
+            "nim_pct": 3.8
+          }
+        }
+      },
+      "products": [
+        {
+          "product_id": "FIN-P01",
+          "name": "MSME Lending Platform",
+          "aum_cr": 8500,
+          "active_borrowers": 142000,
+          "avg_ticket_size_lakh": 5.98,
+          "portfolio_quality": {
+            "gnpa_pct": 2.8,
+            "nnpa_pct": 0.9,
+            "vintage_analysis": {
+              "0_30_dpd_pct": 89.4,
+              "31_60_dpd_pct": 5.8,
+              "61_90_dpd_pct": 2.4,
+              "90plus_dpd_pct": 2.4
+            },
+            "cohort_performance": [
+              {
+                "cohort": "2023-Q1",
+                "disbursed_cr": 320,
+                "outstanding_cr": 85,
+                "npa_pct": 3.1
+              },
+              {
+                "cohort": "2023-Q2",
+                "disbursed_cr": 410,
+                "outstanding_cr": 148,
+                "npa_pct": 2.9
+              },
+              {
+                "cohort": "2024-Q1",
+                "disbursed_cr": 680,
+                "outstanding_cr": 520,
+                "npa_pct": 1.8
+              }
+            ]
+          },
+          "technology_stack": {
+            "core_platform": "In-house",
+            "bureau_integrations": [
+              "CIBIL",
+              "Experian",
+              "CRIF"
+            ],
+            "ml_models": [
+              {
+                "model_id": "ML-001",
+                "name": "Credit Scorecard v3",
+                "type": "XGBoost",
+                "gini": 68.4,
+                "ks_stat": 42.1,
+                "features_count": 148,
+                "last_validated": "2026-01-10",
+                "performance_drift": {
+                  "psi": 0.08,
+                  "csi": 0.04,
+                  "alert_triggered": false
+                }
+              },
+              {
+                "model_id": "ML-002",
+                "name": "Fraud Detection",
+                "type": "Isolation Forest + LSTM",
+                "gini": null,
+                "ks_stat": 58.2,
+                "features_count": 214,
+                "last_validated": "2025-12-15",
+                "performance_drift": {
+                  "psi": 0.21,
+                  "csi": 0.18,
+                  "alert_triggered": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "entity_id": "ENT-03",
+      "name": "Bharat Agro Sciences",
+      "sector": "Agriculture",
+      "listed": false,
+      "ownership_pct": 51.0,
+      "financials": {
+        "fy2025": {
+          "revenue_cr": 1850,
+          "ebitda_cr": 296,
+          "pat_cr": 148,
+          "total_assets_cr": 3200,
+          "total_debt_cr": 850,
+          "ratios": {
+            "roe": 8.9,
+            "roce": 10.2,
+            "de_ratio": 0.41
+          }
+        }
+      },
+      "ma_history": [
+        {
+          "transaction_id": "MA-001",
+          "type": "Acquisition",
+          "target": "KisanChem Pvt Ltd",
+          "deal_value_cr": 280,
+          "stake_acquired_pct": 100,
+          "deal_date": "2023-09-01",
+          "status": "COMPLETED",
+          "advisors": {
+            "legal": "AZB Partners",
+            "financial": "KPMG"
+          },
+          "synergies_projected_cr": 45,
+          "synergies_realized_cr": 38,
+          "integration_status": {
+            "it_integration": "COMPLETE",
+            "hr_integration": "IN_PROGRESS",
+            "brand_consolidation": "PENDING",
+            "completion_pct": 72
+          }
+        }
+      ]
+    }
+  ],
+  "group_governance": {
+    "board": {
+      "total_directors": 9,
+      "independent_directors": 5,
+      "women_directors": 2,
+      "committees": [
+        {
+          "name": "Audit Committee",
+          "chair": "Malati Krishnan",
+          "members": [
+            "Rajiv Mehta",
+            "Sanjay Patel"
+          ],
+          "meetings_fy25": 6,
+          "key_agenda": [
+            "Financial Controls",
+            "Internal Audit Reports",
+            "Related Party Transactions"
+          ]
+        },
+        {
+          "name": "Risk Management Committee",
+          "chair": "Vijay Singh",
+          "members": [
+            "Priya Nair",
+            "Dev Anand"
+          ],
+          "meetings_fy25": 4,
+          "key_agenda": [
+            "Group-level VaR",
+            "Cyber Risk",
+            "Climate Risk Assessment"
+          ]
+        }
+      ]
+    },
+    "related_party_transactions": [
+      {
+        "rpt_id": "RPT-001",
+        "from_entity": "ENT-01",
+        "to_entity": "ENT-02",
+        "nature": "Loan",
+        "amount_cr": 500,
+        "rate_pct": 9.0,
+        "approval_date": "2025-04-01",
+        "arm_length": true
+      },
+      {
+        "rpt_id": "RPT-002",
+        "from_entity": "ENT-02",
+        "to_entity": "ENT-03",
+        "nature": "Service Contract",
+        "amount_cr": 12,
+        "rate_pct": null,
+        "approval_date": "2025-07-01",
+        "arm_length": false
+      }
+    ]
+  },
+  "audit_metadata": {
+    "last_updated": "2026-04-09T01:00:00+05:30",
+    "data_version": "10.0.0",
+    "schema_version": "COMPLEX-V4",
+    "total_entities": 3,
+    "total_anomalies_injected": 12
+  }
+}

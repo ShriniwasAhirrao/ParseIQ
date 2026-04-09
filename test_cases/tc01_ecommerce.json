@@ -1,0 +1,92 @@
+{
+  "platform": "ShopNest",
+  "orders": [
+    {
+      "order_id": "ORD-001",
+      "customer_id": "CUST-101",
+      "date": "2025-11-01",
+      "status": "DELIVERED",
+      "shipping": {
+        "carrier": "BlueDart",
+        "tracking": "BD9921",
+        "days": 3
+      },
+      "items": [
+        {
+          "sku": "ITM-A1",
+          "name": "Wireless Mouse",
+          "qty": 2,
+          "price": 799.0,
+          "discount_pct": 10
+        },
+        {
+          "sku": "ITM-A2",
+          "name": "USB Hub",
+          "qty": 1,
+          "price": 449.0,
+          "discount_pct": 5
+        }
+      ],
+      "payment": {
+        "method": "UPI",
+        "txn_id": "UPI20251101XYZ",
+        "status": "SUCCESS"
+      }
+    },
+    {
+      "order_id": "ORD-002",
+      "customer_id": "CUST-102",
+      "date": "2025-11-03",
+      "status": "CANCELLED",
+      "shipping": {
+        "carrier": "Delhivery",
+        "tracking": null,
+        "days": null
+      },
+      "items": [
+        {
+          "sku": "ITM-B1",
+          "name": "Mechanical Keyboard",
+          "qty": -1,
+          "price": 3200.0
+        },
+        {
+          "sku": "ITM-B2",
+          "name": "Monitor Stand",
+          "qty": 1,
+          "price": 1100.0
+        }
+      ],
+      "payment": {
+        "method": "NetBanking",
+        "txn_id": "NB20251103ABC",
+        "status": "REFUNDED"
+      }
+    },
+    {
+      "order_id": "ORD-003",
+      "customer_id": "CUST-103",
+      "date": "2025-11-07",
+      "status": "PROCESSING",
+      "shipping": {
+        "carrier": "DTDC",
+        "tracking": "DT4401",
+        "days": 5
+      },
+      "items": [
+        {
+          "sku": "ITM-C1",
+          "name": "Webcam",
+          "qty": 1,
+          "price": 2150.0,
+          "discount_pct": 15
+        }
+      ],
+      "payment": {
+        "method": "Card",
+        "txn_id": "CARD20251107PQR",
+        "status": "SUCCESS"
+      }
+    }
+  ]
+}

@@ -478,8 +478,8 @@ class TestQualityScoring(unittest.TestCase):
             "col1": {"quality_score": 90, "anomaly_flags": ["HIGH_NULL_RATE"]},
         }
         score = self.extractor._calculate_quality_score(attrs)
-        # 90 - 3*1 = 87
-        self.assertAlmostEqual(score, 87.0, places=1)
+        # 1/1 = 100% anomaly rate → penalty = 20 → 90 - 20 = 70
+        self.assertAlmostEqual(score, 70.0, places=1)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

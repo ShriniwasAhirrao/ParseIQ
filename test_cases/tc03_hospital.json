@@ -1,0 +1,139 @@
+{
+  "hospital": "Lifeline General Hospital",
+  "city": "Pune",
+  "wards": [
+    {
+      "ward_id": "W01",
+      "ward_name": "Cardiology",
+      "ward_type": "ICU",
+      "capacity": 20,
+      "current_occupancy": 14,
+      "patients": [
+        {
+          "patient_id": "P001",
+          "name": "Suresh Patil",
+          "age": 58,
+          "admitted": "2026-01-10",
+          "discharged": "2026-01-18",
+          "diagnosis": "Acute MI",
+          "vitals": {
+            "bp_systolic": 145,
+            "bp_diastolic": 92,
+            "heart_rate": 88,
+            "spo2_pct": 96,
+            "temperature_c": 37.2
+          },
+          "prescriptions": [
+            {
+              "rx_id": "RX-001",
+              "drug": "Aspirin",
+              "dosage_mg": 75,
+              "frequency": "OD",
+              "duration_days": 30,
+              "administered_by": "Dr. Meera Shah"
+            },
+            {
+              "rx_id": "RX-002",
+              "drug": "Atorvastatin",
+              "dosage_mg": 40,
+              "frequency": "HS",
+              "duration_days": 90,
+              "administered_by": "Dr. Meera Shah"
+            }
+          ],
+          "lab_results": [
+            {
+              "test": "CBC",
+              "date": "2026-01-10",
+              "values": {
+                "wbc": 8.2,
+                "rbc": 4.5,
+                "hgb": 13.8,
+                "hct": 41.2
+              }
+            },
+            {
+              "test": "LFT",
+              "date": "2026-01-12",
+              "values": {
+                "alt": 32,
+                "ast": 28,
+                "alp": 90,
+                "bilirubin": 0.9
+              }
+            }
+          ]
+        },
+        {
+          "patient_id": "P002",
+          "name": "Kavita Rao",
+          "age": 45,
+          "admitted": "2026-02-01",
+          "discharged": null,
+          "diagnosis": "Unstable Angina",
+          "vitals": {
+            "bp_systolic": 162,
+            "bp_diastolic": 98,
+            "heart_rate": null,
+            "spo2_pct": 94,
+            "temperature_c": 36.8
+          },
+          "prescriptions": [
+            {
+              "rx_id": "RX-003",
+              "drug": "Nitroglycerin",
+              "dosage_mg": -5,
+              "frequency": "PRN",
+              "duration_days": 7,
+              "administered_by": "Dr. Arjun Nair"
+            }
+          ],
+          "lab_results": []
+        }
+      ]
+    },
+    {
+      "ward_id": "W02",
+      "ward_name": "Orthopedics",
+      "capacity": 30,
+      "current_occupancy": 22,
+      "patients": [
+        {
+          "patient_id": "P010",
+          "name": "Mohan Desai",
+          "age": 70,
+          "admitted": "2026-02-10",
+          "discharged": "2026-02-20",
+          "diagnosis": "Hip Fracture",
+          "vitals": {
+            "bp_systolic": 130,
+            "bp_diastolic": 82,
+            "heart_rate": 72,
+            "spo2_pct": 98,
+            "temperature_c": 37.0
+          },
+          "prescriptions": [
+            {
+              "rx_id": "RX-010",
+              "drug": "Tramadol",
+              "dosage_mg": 50,
+              "frequency": "BD",
+              "duration_days": 5,
+              "administered_by": "Dr. Sonal Mehta"
+            }
+          ],
+          "lab_results": [
+            {
+              "test": "X-Ray",
+              "date": "2026-02-10",
+              "values": {
+                "fracture_grade": "III",
+                "displacement_mm": 8
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

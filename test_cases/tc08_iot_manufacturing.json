@@ -1,0 +1,134 @@
+{
+  "factory_id": "FAC-NASHIK-01",
+  "plant_name": "Precision Auto Parts - Nashik Plant",
+  "production_lines": [
+    {
+      "line_id": "LINE-A",
+      "product": "Engine Crankshaft",
+      "shift": "Morning",
+      "target_units_per_shift": 200,
+      "machines": [
+        {
+          "machine_id": "MCH-001",
+          "type": "CNC Lathe",
+          "model": "Mazak QTN-350",
+          "install_year": 2018,
+          "maintenance": {
+            "last_service": "2026-02-01",
+            "next_service": "2026-05-01",
+            "total_downtime_hrs_ytd": 18.5,
+            "service_log": [
+              {
+                "date": "2025-08-01",
+                "type": "Preventive",
+                "technician": "Raju Sawant",
+                "parts_replaced": [
+                  "Belt",
+                  "Coolant Filter"
+                ]
+              },
+              {
+                "date": "2026-02-01",
+                "type": "Corrective",
+                "technician": "Manoj Patil",
+                "parts_replaced": [
+                  "Spindle Bearing"
+                ]
+              }
+            ]
+          },
+          "sensors": [
+            {
+              "sensor_id": "SEN-001A",
+              "type": "Vibration",
+              "unit": "mm/s",
+              "normal_range": [
+                0,
+                10
+              ],
+              "readings": [
+                {
+                  "timestamp": "2026-04-09T06:00:00",
+                  "value": 4.2,
+                  "alert": false
+                },
+                {
+                  "timestamp": "2026-04-09T06:15:00",
+                  "value": 6.1,
+                  "alert": false
+                },
+                {
+                  "timestamp": "2026-04-09T06:30:00",
+                  "value": 18.9,
+                  "alert": true
+                },
+                {
+                  "timestamp": "2026-04-09T06:45:00",
+                  "value": 5.3,
+                  "alert": false
+                }
+              ]
+            },
+            {
+              "sensor_id": "SEN-001B",
+              "type": "Temperature",
+              "unit": "C",
+              "normal_range": [
+                20,
+                80
+              ],
+              "readings": [
+                {
+                  "timestamp": "2026-04-09T06:00:00",
+                  "value": 45.1,
+                  "alert": false
+                },
+                {
+                  "timestamp": "2026-04-09T06:15:00",
+                  "value": 52.3,
+                  "alert": false
+                },
+                {
+                  "timestamp": "2026-04-09T06:30:00",
+                  "value": 79.8,
+                  "alert": false
+                },
+                {
+                  "timestamp": "2026-04-09T06:45:00",
+                  "value": 95.4,
+                  "alert": true
+                }
+              ]
+            }
+          ],
+          "production_log": [
+            {
+              "unit_id": "UNIT-00101",
+              "start": "2026-04-09T06:00:00",
+              "end": "2026-04-09T06:08:00",
+              "cycle_time_min": 8.0,
+              "quality": "PASS",
+              "defect_code": null
+            },
+            {
+              "unit_id": "UNIT-00102",
+              "start": "2026-04-09T06:08:00",
+              "end": "2026-04-09T06:16:00",
+              "cycle_time_min": -8.0,
+              "quality": "FAIL",
+              "defect_code": "D04-DIMCHECK"
+            },
+            {
+              "unit_id": null,
+              "start": "2026-04-09T06:16:00",
+              "end": "2026-04-09T06:25:00",
+              "cycle_time_min": 9.0,
+              "quality": "PASS",
+              "defect_code": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
