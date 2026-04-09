@@ -13,6 +13,7 @@ _NEGATIVE_ALLOWED_PATTERNS = (
     'var_', 'drawdown', '_shock', 'cfi_', 'cff_', 'capex', 'pnl',
     'loss', 'deficit', 'outflow', 'return_pct', 'change_pct',
     'growth_pct', 'alpha', 'spread', 'discount', 'impairment',
+    '_return', '_yield',  # catches predicted_return_1m_pct, dividend_yield_pct, etc.
 )
 
 
@@ -161,13 +162,31 @@ class MetadataExtractor:
         # Extract all unique attributes from all records in this specific table
         all_attributes = self._collect_all_attributes_from_records(records)
         print(f"    📋 Found {len(all_attributes)} unique attributes in {table_name}: {list(all_attributes)}")
-        
+
+        # Detect schema groups (schema polymorphism) before per-attribute analysis
+        schema_groups_info = self._detect_schema_groups(records)
+        type_conditional_cols: set = schema_groups_info.get("type_conditional_cols", set())
+        if schema_groups_info:
+            disc = schema_groups_info.get("discriminator", "")
+            n_groups = len(schema_groups_info.get("groups", {}))
+            n_tc = len(type_conditional_cols)
+            print(f"    🔀 Schema polymorphism detected: discriminator='{disc}', "
+                  f"{n_groups} groups, {n_tc} type-conditional columns")
+            table_metadata["schema_groups"] = {
+                "discriminator": disc,
+                "group_count": n_groups,
+                "score": schema_groups_info.get("score", 0),
+                "type_conditional_columns": sorted(type_conditional_cols),
+            }
+
         # Analyze each attribute in detail (skip injected FK columns)
         for attr_name in all_attributes:
             if attr_name.startswith('_ref_'):
                 continue  # Exclude FK columns injected by the flattener
             print(f"    📊 Analyzing attribute: {table_name}.{attr_name}")
-            attr_metadata = self._analyze_attribute(records, attr_name)
+            is_type_conditional = attr_name in type_conditional_cols
+            attr_metadata = self._analyze_attribute(records, attr_name,
+                                                    is_type_conditional=is_type_conditional)
             table_metadata["attributes"][attr_name] = attr_metadata
         
         # Perform schema analysis
@@ -526,7 +545,8 @@ class MetadataExtractor:
                 attributes.update(record.keys())
         return attributes
 
-    def _analyze_attribute(self, data: List[Dict], attr_name: str) -> Dict[str, Any]:
+    def _analyze_attribute(self, data: List[Dict], attr_name: str,
+                           is_type_conditional: bool = False) -> Dict[str, Any]:
         """Analyze a single attribute comprehensively"""
         values = []
         null_count = 0
@@ -576,8 +596,11 @@ class MetadataExtractor:
         attr_metadata["pattern_analysis"] = self._analyze_patterns(values)
         
         # Anomaly detection
-        attr_metadata["anomaly_flags"] = self._detect_anomalies(attr_metadata, values, attr_name)
-        
+        attr_metadata["anomaly_flags"] = self._detect_anomalies(
+            attr_metadata, values, attr_name, is_type_conditional=is_type_conditional
+        )
+        attr_metadata["type_conditional"] = is_type_conditional
+
         # Quality assessment
         attr_metadata["quality_score"] = self._calculate_attribute_quality_score(attr_metadata)
         
@@ -799,13 +822,17 @@ class MetadataExtractor:
         }
 
     def _detect_anomalies(self, attr_metadata: Dict[str, Any], values: List[Any],
-                          attr_name: str = "") -> List[str]:
+                          attr_name: str = "", is_type_conditional: bool = False) -> List[str]:
         """Detect anomalies in attribute data"""
         anomalies = []
-        
-        # High null rate
+
+        # High null rate — but if the column is type-conditional (only applies to certain
+        # entity types within a polymorphic table), flag it informally rather than as a real error.
         if attr_metadata.get("null_percentage", 0) > 30:
-            anomalies.append("HIGH_NULL_RATE")
+            if is_type_conditional:
+                anomalies.append("TYPE_CONDITIONAL_FIELD")
+            else:
+                anomalies.append("HIGH_NULL_RATE")
         
         # String length anomalies
         if attr_metadata.get("data_type") == "string":
@@ -881,13 +908,22 @@ class MetadataExtractor:
         """Calculate quality score for an attribute (0-100)"""
         score = 100.0
 
-        # Penalize high null rates
-        null_pct = attr_metadata.get("null_percentage", 0)
-        score -= min(null_pct * 0.5, 30)  # Max 30 point penalty
+        anomaly_flags = attr_metadata.get("anomaly_flags", [])
+        is_type_conditional = attr_metadata.get("type_conditional", False)
 
-        # Penalize anomalies
-        anomaly_count = len(attr_metadata.get("anomaly_flags", []))
-        score -= anomaly_count * 15  # 15 points per anomaly flag
+        # Penalize high null rates — but suppress for type-conditional columns whose
+        # absence is explained by the discriminator-based schema group.
+        if not is_type_conditional:
+            null_pct = attr_metadata.get("null_percentage", 0)
+            score -= min(null_pct * 0.5, 30)  # Max 30 point penalty
+
+        # Penalize anomalies; TYPE_CONDITIONAL_FIELD gets a 2pt info penalty
+        # (vs 15pt for real anomalies) since absence is expected for that entity type.
+        for flag in anomaly_flags:
+            if flag == "TYPE_CONDITIONAL_FIELD":
+                score -= 2
+            else:
+                score -= 15
 
         # Ensure score is within bounds
         return max(0.0, min(100.0, round(score, 2)))
@@ -1084,17 +1120,142 @@ class MetadataExtractor:
 
         return violations
 
+    def _detect_schema_groups(self, records: List[Dict]) -> Dict[str, Any]:
+        """Detect if records in a table fall into distinct schema groups driven by a
+        discriminator field (schema polymorphism).
+
+        A discriminator field is a low-cardinality categorical column whose value
+        explains which other fields are present or absent in each record.
+
+        Returns a dict with keys:
+          discriminator, groups (dict val→list-of-cols), type_conditional_cols (set), score
+        Or an empty dict if no discriminator is found.
+        """
+        if len(records) < 2:
+            return {}
+
+        all_cols = list(self._collect_all_attributes_from_records(records))
+        total = len(records)
+        best_score = 0.0
+        best_disc = None
+        best_groups: Dict[str, List[Dict]] = {}
+
+        for col in all_cols:
+            # Must be present in ≥70% of records
+            present_count = sum(
+                1 for rec in records
+                if rec.get(col) is not None and rec.get(col) != ""
+            )
+            if present_count / total < 0.70:
+                continue
+
+            # Collect distinct non-null values
+            vals = [
+                str(rec[col]) for rec in records
+                if col in rec and rec[col] is not None and rec[col] != ""
+            ]
+            unique_vals = list(set(vals))
+
+            # Low cardinality: 2-10 unique values
+            if not (2 <= len(unique_vals) <= 10):
+                continue
+
+            # Must be categorical (non-numeric)
+            try:
+                float(unique_vals[0])
+                continue
+            except (ValueError, TypeError):
+                pass
+
+            # Skip columns that look like unique identifiers — they are not meaningful
+            # discriminators even when they happen to have low cardinality on a small dataset.
+            col_lower = col.lower()
+            _id_suffixes = ('_id', '_key', '_code', '_uuid', '_ref')
+            _id_names = {'id', 'isin', 'name', 'ticker', 'symbol', 'cusip', 'sku'}
+            if (any(col_lower.endswith(sfx) for sfx in _id_suffixes)
+                    or col_lower in _id_names
+                    or col_lower.startswith('id_')):
+                continue
+
+            # Group records by discriminator value
+            groups: Dict[str, List[Dict]] = {}
+            for rec in records:
+                v = rec.get(col)
+                key = str(v) if v is not None else "__missing__"
+                groups.setdefault(key, []).append(rec)
+
+            # Skip trivial cases (all groups are singletons when n > 2)
+            if len(groups) > 2 and all(len(g) == 1 for g in groups.values()):
+                continue
+
+            # Score: fraction of variable-presence columns explained by the grouping
+            explained = 0
+            total_variable_cols = 0
+            for c in all_cols:
+                if c == col:
+                    continue
+                c_presence = sum(1 for rec in records if rec.get(c) is not None) / total
+                if c_presence >= 0.85 or c_presence <= 0.15:
+                    continue  # Not variable across records
+                total_variable_cols += 1
+                group_purities = []
+                for g_recs in groups.values():
+                    gp = sum(1 for r in g_recs if r.get(c) is not None) / len(g_recs)
+                    group_purities.append(max(gp, 1.0 - gp))
+                if np.mean(group_purities) > 0.80:
+                    explained += 1
+
+            score = (explained / total_variable_cols) if total_variable_cols > 0 else 0.0
+
+            if score > best_score and score > 0.25:
+                best_score = score
+                best_disc = col
+                best_groups = groups
+
+        if best_disc is None:
+            return {}
+
+        # Build per-group column sets (cols present in ≥50% of group records)
+        group_col_sets: Dict[str, set] = {}
+        for gval, g_recs in best_groups.items():
+            g_cols = set()
+            for c in all_cols:
+                presence_rate = sum(1 for r in g_recs if r.get(c) is not None) / len(g_recs)
+                if presence_rate >= 0.5:
+                    g_cols.add(c)
+            group_col_sets[gval] = g_cols
+
+        # type_conditional_cols: present in some groups but absent in others
+        all_group_sets = list(group_col_sets.values())
+        universal = set.intersection(*all_group_sets) if all_group_sets else set()
+        type_conditional: set = set()
+        for c in all_cols:
+            if c == best_disc or c in universal:
+                continue
+            in_some = any(c in g for g in all_group_sets)
+            not_in_some = any(c not in g for g in all_group_sets)
+            if in_some and not_in_some:
+                type_conditional.add(c)
+
+        return {
+            "discriminator": best_disc,
+            "groups": {k: sorted(v) for k, v in group_col_sets.items()},
+            "type_conditional_cols": type_conditional,
+            "score": round(best_score, 3),
+        }
+
     def _identify_top_issues(self, attributes: Dict[str, Any]) -> List[str]:
         """Identify the top data quality issues"""
         issues = []
         
         for attr_name, attr_data in attributes.items():
-            # High null rate issues
+            # High null rate issues — skip for type-conditional columns
             null_pct = attr_data.get("null_percentage", 0)
-            if null_pct > 50:
-                issues.append(f"'{attr_name}' has very high null rate ({null_pct:.1f}%)")
-            elif null_pct > 30:
-                issues.append(f"'{attr_name}' has high null rate ({null_pct:.1f}%)")
+            if not attr_data.get("type_conditional", False):
+                if null_pct > 50:
+                    issues.append(f"'{attr_name}' has very high null rate ({null_pct:.1f}%)")
+                elif null_pct > 30:
+                    issues.append(f"'{attr_name}' has high null rate ({null_pct:.1f}%)")
             
             # Low quality score
             quality_score = attr_data.get("quality_score", 100)
@@ -1106,6 +1267,8 @@ class MetadataExtractor:
             for anomaly in anomalies:
                 if anomaly == "HIGH_NULL_RATE":
                     continue  # Already covered above
+                elif anomaly == "TYPE_CONDITIONAL_FIELD":
+                    continue  # Informational — absence explained by schema polymorphism
                 elif anomaly == "NUMERIC_OUTLIERS_DETECTED":
                     outlier_count = attr_data.get("outliers", {}).get("count", 0)
                     issues.append(f"'{attr_name}' has {outlier_count} numeric outliers")
