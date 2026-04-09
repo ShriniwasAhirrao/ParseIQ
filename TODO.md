@@ -5,6 +5,17 @@
 
 ---
 
+## ✅ Completed — v0.0.5 (2026-04-09)
+
+- ✅ **Issue K** — Schema polymorphism: `_detect_schema_groups()` finds a discriminator column (low-cardinality categorical, ≥70% present, not an ID/key) and classifies type-conditional columns (absent for some entity types) as `TYPE_CONDITIONAL_FIELD` instead of `HIGH_NULL_RATE`
+- ✅ **TYPE_CONDITIONAL_FIELD** anomaly type added: 2pt quality penalty (vs 15pt), null-rate deduction suppressed, excluded from `top_issues` surfacing; `schema_groups` metadata block written to table output
+- ✅ **NEGATIVE_ALLOWED_PATTERNS** extended: `_return` and `_yield` tokens added — `predicted_return_1m_pct`, `dividend_yield_pct`, etc. no longer produce spurious `NEGATIVE_VALUES_DETECTED` flags
+- ✅ **`_describe_issue()`** updated in `pipeline.py` with actionable guidance for `TYPE_CONDITIONAL_FIELD`
+- ✅ **Result on apex_capital dataset**: quality score 95.66 (was ~50s); ~58 false-positive `HIGH_NULL_RATE` flags eliminated
+- ✅ 159/159 tests passing
+
+---
+
 ## ✅ Completed — v0.0.4 (2026-04-09)
 
 - ✅ **Issue E** — Relax version pins in `pyproject.toml` so ParseIQ installs cleanly alongside older pandas/numpy
@@ -246,4 +257,31 @@ raise `HIGH_NULL_RATE` only if the column represents a known time-series key (he
 column name ends with 4 digits that look like a year).
 
 **File:** `parseiq/file_loader/loader.py`, `parseiq/step1_metadata_extractor/extractor.py`
+**Label:** `enhancement`
+
+---
+
+### ✅ Issue K — Schema Polymorphism False Positives — FIXED in v0.0.5
+**Symptom:** When a JSON array contains records of fundamentally different types
+(e.g. Energy stocks and Banking stocks in `holdings[]`, or Equity funds and Quant funds in
+`portfolios[]`), ParseIQ treats them as one uniform schema. Fields that only apply to one
+entity type are counted as "null" for all records, producing mass `HIGH_NULL_RATE` false
+positives (39 for holdings, 19 for portfolios on the apex_capital dataset — ~58 of 63 total
+anomalies were false positives).
+
+**Root cause:** No entity-type clustering before per-attribute statistics were computed.
+
+**Fix:** New `_detect_schema_groups(records)` method in `extractor.py`:
+- Finds a *discriminator column*: low-cardinality (2–10 unique values), ≥70% present,
+  categorical (non-numeric), not an ID/key column (skips `_id` suffix, `isin`, `name`, etc.)
+- Scores how well the discriminator explains variable-presence columns (purity ≥ 80% per group)
+- Marks columns present in some groups but absent in others as `type_conditional_cols`
+- Type-conditional columns get `TYPE_CONDITIONAL_FIELD` instead of `HIGH_NULL_RATE`:
+  2pt quality penalty, no null-rate deduction, suppressed from top_issues
+- `schema_groups` metadata block written to table output (discriminator, group count, score,
+  type_conditional_columns list)
+
+**Also fixed:** `_NEGATIVE_ALLOWED_PATTERNS` extended with `_return` and `_yield` tokens.
+
+**File:** `parseiq/step1_metadata_extractor/extractor.py`, `parseiq/pipeline.py`
 **Label:** `enhancement`

@@ -4,6 +4,61 @@ Development sessions, decisions, and technical notes in reverse-chronological or
 
 ---
 
+## Session: 2026-04-09 — Schema Polymorphism Detection (v0.0.5)
+
+### Overview
+User provided `apex_capital_dataset.json` and full ParseIQ output showing 63 total anomalies
+of which ~58 were false positives caused by schema polymorphism — ParseIQ treating
+heterogeneous records (RELIANCE Energy + HDFCBANK Banking) as one uniform schema.
+
+Root cause identified: no entity-type clustering before per-attribute statistics. Fields absent
+for a specific entity type were counted as nulls across all records → `HIGH_NULL_RATE` fires
+on every type-conditional column.
+
+### Fix: `_detect_schema_groups()` (`extractor.py`)
+
+New method added before the attribute-analysis loop in `_analyze_table_detailed()`.
+
+**Algorithm:**
+1. For each column: check ≥70% presence, 2–10 unique values, categorical (non-numeric),
+   not an ID/key column (filtered by `_id` suffix, `isin`, `name`, `ticker`, etc.)
+2. Group records by discriminator value → compute per-group column presence purity
+3. Score = fraction of variable-presence columns (15–85% overall presence) with ≥80%
+   purity within each group
+4. Accept if score > 0.25 → record as discriminator; derive `type_conditional_cols`
+
+**Result on apex_capital:**
+- `holdings`: discriminator = `sector` (Energy vs Financial Services) → 39 columns classified as type-conditional
+- `portfolios`: 19 columns classified as type-conditional
+- `departments`: 3 risk-framework columns classified as type-conditional
+- Quality score: 95.66 (up from ~50s); 0 false-positive `HIGH_NULL_RATE` flags
+
+### `TYPE_CONDITIONAL_FIELD` anomaly type
+
+- Replaces `HIGH_NULL_RATE` for type-conditional columns
+- 2pt quality penalty vs 15pt for real anomalies
+- Null-rate quality deduction suppressed
+- Excluded from `top_issues` surfacing and null-rate issue messages
+- `schema_groups` block written to table metadata (discriminator, group_count, score, type_conditional_columns)
+- `_describe_issue()` in `pipeline.py` updated with actionable guidance
+
+### `_NEGATIVE_ALLOWED_PATTERNS` extended
+
+Added `'_return'` and `'_yield'` tokens — fixes `predicted_return_1m_pct` and
+`dividend_yield_pct` false positives (pattern `return_pct` didn't match when `_1m_`
+separated `return` and `pct` in the column name).
+
+### Version bump: 0.0.4 → 0.0.5
+
+- `pyproject.toml`, `parseiq/__init__.py` updated
+- `CHANGELOG.md`, `README.md`, `TODO.md`, `WORKLOG.md` updated
+- Git tag `v0.0.5` pushed to GitHub
+- `dist/parseiq-0.0.5.tar.gz` and `.whl` built (awaiting PyPI upload with user token)
+
+### Tests: 159/159 passing
+
+---
+
 ## Session: 2026-04-09 — Deep JSON Flattening + Quality Score + Bug Fixes
 
 ### Overview
