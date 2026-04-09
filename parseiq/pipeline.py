@@ -599,11 +599,23 @@ def _describe_issue(flag: str, col: str, table: str, dtype: str,
 # ---------------------------------------------------------------------------
 
 def _find_rules_file(source_arg: str) -> Optional[str]:
-    """Return path of a parseiq_rules.yaml/yml/json sidecar next to the input file."""
+    """Return path of a rules sidecar next to the input file.
+
+    Looks for (in priority order):
+      1. parseiq_rules.yaml / .yml / .json  — shared, one per directory
+      2. <input_stem>_rules.yaml / .yml / .json — file-specific sidecar
+         e.g. tc04_university_rules.yaml for tc04_university.json
+    """
     if not os.path.isfile(source_arg):
         return None
-    base_dir = os.path.dirname(os.path.abspath(source_arg))
-    for name in ("parseiq_rules.yaml", "parseiq_rules.yml", "parseiq_rules.json"):
+    abs_path = os.path.abspath(source_arg)
+    base_dir = os.path.dirname(abs_path)
+    stem = os.path.splitext(os.path.basename(abs_path))[0]
+    candidates = [
+        "parseiq_rules.yaml", "parseiq_rules.yml", "parseiq_rules.json",
+        f"{stem}_rules.yaml", f"{stem}_rules.yml", f"{stem}_rules.json",
+    ]
+    for name in candidates:
         candidate = os.path.join(base_dir, name)
         if os.path.isfile(candidate):
             return candidate
