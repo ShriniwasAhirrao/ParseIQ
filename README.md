@@ -434,6 +434,7 @@ ParseIQ flags 11 types of data quality issues — 8 column-level detectors that 
 | `PATTERN_INCONSISTENCY` | Dominant pattern (e.g. email) but 10–50% of values don't match |
 | `DUPLICATE_ROWS_DETECTED` | Exact duplicate rows found at the table level |
 | `RANGE_VIOLATION_DETECTED` | A numeric value in a child table falls outside the `[lo, hi]` range defined by a `*_range*` column in a parent table (auto-detected via name-match and FK-child heuristics) |
+| `TYPE_CONDITIONAL_FIELD` | Column is absent for some entity types within a polymorphic table (e.g. banking-specific metrics missing for energy stocks). Informational only — 2pt penalty vs 15pt, suppressed from top issues. Discriminator column and group breakdown are included in `schema_groups` metadata. |
 
 ### Via `parseiq_rules.yaml` sidecar
 
@@ -565,6 +566,25 @@ Current status: **159/159 passing** (v0.0.4)
 | CSV | `.csv` | Auto-detects delimiter (comma, semicolon, tab) and file encoding |
 | XML | `.xml` | Converted via `xmltodict`, then processed as JSON |
 | Excel | `.xlsx` `.xls` | Each sheet becomes a separate table |
+
+---
+
+## What's New in v0.0.5
+
+### Schema Polymorphism Detection (Issue K)
+
+ParseIQ now handles **heterogeneous record types** within the same JSON array — a pattern common in financial datasets where Energy stocks and Banking stocks share an array but have completely different field sets.
+
+**Before v0.0.5:** ParseIQ treated all records as a single schema. Fields absent for some entity types were flagged as `HIGH_NULL_RATE` (15pt penalty each). A 2-company `holdings` array with 39 schema-conditional fields produced 39 false-positive anomalies.
+
+**After v0.0.5:** ParseIQ detects a *discriminator column* (e.g. `sector`) and groups records by entity type. Fields absent for some types are reclassified as `TYPE_CONDITIONAL_FIELD` — informational (2pt penalty, suppressed from top issues). Same dataset: 0 false-positive `HIGH_NULL_RATE` flags.
+
+**What gets detected:**
+- Discriminator column: a low-cardinality categorical field (2–10 unique values, ≥70% present, not an ID/key column) whose values explain which other fields are present or absent
+- Type-conditional columns: fields present for some entity types but absent for others
+- Schema groups metadata: written to `table_metadata.schema_groups` in raw output
+
+**Also fixed:** `_NEGATIVE_ALLOWED_PATTERNS` extended with `_return` and `_yield` tokens — `predicted_return_1m_pct`, `dividend_yield_pct`, and similar columns no longer produce spurious `NEGATIVE_VALUES_DETECTED` flags.
 
 ---
 

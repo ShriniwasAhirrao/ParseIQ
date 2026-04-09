@@ -585,6 +585,18 @@ def _describe_issue(flag: str, col: str, table: str, dtype: str,
                   f"4. Use DISTINCT or ROW_NUMBER() deduplication in your ETL before loading.")
         effort = "Medium"
 
+    elif flag == "TYPE_CONDITIONAL_FIELD":
+        desc   = (f"Column {col_ref} is type-conditional — it is absent for some entity types "
+                  f"within this table ({null_pct}% null overall)")
+        impact = ("This is an informational flag, not a data quality error. The column is only "
+                  "applicable to a subset of entity types (detected via schema polymorphism). "
+                  "No fix needed unless the column should be normalised into separate sub-type tables.")
+        fix    = (f"1. Verify that the discriminator column (entity type) correctly partitions records.  "
+                  f"2. If strict normalisation is required: split '{table}' into per-type sub-tables.  "
+                  f"3. Otherwise: document which entity types populate '{col}' in your data dictionary.  "
+                  f"4. Consider adding a JSON/JSONB variant column for optional type-specific attributes.")
+        effort = "Low"
+
     else:
         desc   = f"Issue '{flag}' detected in {col_ref}"
         impact = "Data quality concern that may affect downstream analysis accuracy."

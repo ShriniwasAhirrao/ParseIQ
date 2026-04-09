@@ -5,6 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.5] — 2026-04-09
+
+### Fixed
+
+- **Schema polymorphism false positives** (`parseiq/step1_metadata_extractor/extractor.py`)
+  - New `_detect_schema_groups(records)` method detects when a table contains heterogeneous
+    record types (e.g. Energy stocks and Banking stocks) driven by a discriminator column
+    (e.g. `sector`).
+  - Columns that are absent for some entity types (type-conditional) are now flagged as
+    `TYPE_CONDITIONAL_FIELD` instead of `HIGH_NULL_RATE`.
+  - `TYPE_CONDITIONAL_FIELD` carries a 2pt quality penalty (vs 15pt for real anomalies),
+    zero null-rate score deduction, and is suppressed from the `top_issues` surfacing list.
+  - Discriminator detection skips identifier-like columns (`_id` suffix, `isin`, `name`,
+    `ticker`, etc.) to prefer semantically meaningful categorical columns (e.g. `sector`,
+    `strategy`, `asset_class`).
+  - `_NEGATIVE_ALLOWED_PATTERNS` extended with `'_return'` and `'_yield'` tokens to
+    suppress false positives for `predicted_return_1m_pct`, `dividend_yield_pct`, etc.
+  - `_describe_issue()` in `pipeline.py` now provides actionable guidance for
+    `TYPE_CONDITIONAL_FIELD` flags.
+
+### Added
+
+- **`TYPE_CONDITIONAL_FIELD` anomaly type** — informational annotation for columns that are
+  legitimately absent for a subset of entity types within a polymorphic table. The table's
+  `schema_groups` metadata block records the discriminator column name, group count, score,
+  and list of type-conditional columns.
+
 ## [0.0.4] — 2026-04-09
 
 ### Fixed
