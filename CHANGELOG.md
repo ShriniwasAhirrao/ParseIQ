@@ -5,6 +5,51 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.0.6] — 2026-04-10
+
+### Fixed
+
+- **LLM mode: Overall Score showing N/A in Excel `01_LLM_Assessment` sheet**
+  (`parseiq/pipeline.py`)
+  - `_generate_outputs()` was reading `oa.get("overall_score", "N/A")` but the fallback
+    path only populated `"corrected_score"`. Now uses a defensive lookup:
+    `next((oa[k] for k in ("overall_score", "corrected_score") if k in oa), "N/A")`.
+
+- **LLM mode: Model Used showing N/A in Excel `01_LLM_Assessment` sheet**
+  (`parseiq/step2_llm_enricher/llm_agent.py`)
+  - `_create_fallback_enrichment()` was missing `"model_used"` in its
+    `enrichment_metadata` dict. Added `"model_used": self.model`.
+
+- **LLM mode: corrected_score always 0 when LLM call succeeds or falls back**
+  (`parseiq/step2_llm_enricher/llm_agent.py`)
+  - `_calculate_corrected_quality_score()` looked for `original_score` only in
+    `data_quality_summary.overall_score`, `overall_score`, and `data_quality_score` —
+    none of which exist in the metadata structure the pipeline actually builds.
+  - Added two additional lookup paths that match the real structure:
+    1. `dataset_overview.table_summaries[*].quality_score` — average across tables
+    2. `tables[*].table_metadata.data_quality_score` — per-table extractor output
+  - `corrected_score` now correctly reflects the real per-table quality scores instead
+    of computing penalties against a base of 0.
+
+- **Fallback enrichment missing `overall_score`, `key_strengths`, `primary_concerns`**
+  (`parseiq/step2_llm_enricher/llm_agent.py`)
+  - `_create_fallback_enrichment()` now sets `"overall_score"` (same value as
+    `"corrected_score"`) and empty-list stubs for `"key_strengths"` and
+    `"primary_concerns"` so Excel rendering never produces blank/error cells.
+
+### Tests
+
+- Added 6 regression tests to `tests/test_llm_enricher.py` covering all four bugs:
+  `test_corrected_score_reads_from_dataset_overview`,
+  `test_corrected_score_reads_from_tables_metadata`,
+  `test_fallback_enrichment_has_overall_score`,
+  `test_fallback_enrichment_has_model_used`,
+  `test_fallback_enrichment_has_key_strengths_and_concerns`,
+  `test_generate_outputs_uses_corrected_score_fallback`.
+- 165/165 tests passing (159 existing + 6 new regression).
+
+---
+
 ## [0.0.5] — 2026-04-09
 
 ### Fixed

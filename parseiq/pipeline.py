@@ -1050,7 +1050,7 @@ def _generate_outputs(tables, raw_metadata, enriched, out_dir) -> List[str]:
     if oa:
         assess_rows = [
             {"Field": "Quality Grade",        "Value": oa.get("quality_grade", "N/A")},
-            {"Field": "Overall Score",        "Value": oa.get("overall_score", "N/A")},
+            {"Field": "Overall Score",        "Value": next((oa[k] for k in ("overall_score", "corrected_score") if k in oa), "N/A")},
             {"Field": "Production Readiness", "Value": oa.get("production_readiness", "N/A")},
             {"Field": "Risk Level",           "Value": llm_ins.get("risk_assessment", {}).get("overall_risk_level", "N/A")},
             {"Field": "Model Used",           "Value": llm_ins.get("enrichment_metadata", {}).get("model_used", "N/A")},

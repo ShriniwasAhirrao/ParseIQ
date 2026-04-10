@@ -4,6 +4,42 @@ Development sessions, decisions, and technical notes in reverse-chronological or
 
 ---
 
+## Session: 2026-04-10 — LLM Mode Output Fixes (v0.0.6)
+
+### Overview
+Testing revealed that in LLM mode the Excel `01_LLM_Assessment` sheet showed `N/A` for
+**Overall Score** and **Model Used**, and that `corrected_score` was always `0` regardless
+of the actual data quality. Four related bugs traced to three files.
+
+### Bugs Fixed
+
+**Bug 1 — corrected_score always 0** (`parseiq/step2_llm_enricher/llm_agent.py`)
+`_calculate_corrected_quality_score()` looked for `original_score` at keys like
+`data_quality_summary.overall_score` and `data_quality_score` — keys that do not exist
+in the metadata dict the pipeline actually builds. Extended with two correct lookup paths:
+- `dataset_overview.table_summaries[*].quality_score` (average across all tables)
+- `tables[*].table_metadata.data_quality_score` (per-table extractor output)
+
+**Bug 2 — Overall Score N/A in Excel** (`parseiq/pipeline.py`)
+`_generate_outputs()` read `oa.get("overall_score", "N/A")` but the fallback and internal
+paths only set `"corrected_score"`. Fixed with defensive lookup across both keys.
+
+**Bug 3 — Model Used N/A in Excel** (`parseiq/step2_llm_enricher/llm_agent.py`)
+`_create_fallback_enrichment()` omitted `"model_used"` from its `enrichment_metadata`.
+Added `"model_used": self.model`.
+
+**Bug 4 — Fallback missing key_strengths / primary_concerns / overall_score**
+Same fallback method also lacked `"overall_score"`, `"key_strengths"`, `"primary_concerns"`
+in `overall_assessment`. Added all three.
+
+### Tests
+6 regression tests added to `tests/test_llm_enricher.py`. 165/165 passing.
+
+### Version bump
+`0.0.5` → `0.0.6` in `pyproject.toml` and `parseiq/__init__.py`.
+
+---
+
 ## Session: 2026-04-09 — Schema Polymorphism Detection (v0.0.5)
 
 ### Overview

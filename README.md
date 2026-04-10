@@ -149,7 +149,7 @@ ParseIQ is designed to fit inside any company's data stack without compromising 
 $ parseiq analyze input/enterprises.json --no-llm
 
 =======================================================
-  ParseIQ - AI-Powered Data Quality Agent  v0.0.4
+  ParseIQ - AI-Powered Data Quality Agent  v0.0.6
 =======================================================
 
 File     : input/enterprises.json

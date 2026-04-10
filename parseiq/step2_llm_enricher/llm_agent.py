@@ -862,6 +862,27 @@ class LLMEnricher:
                     # Try to find score in raw_metadata if it exists
                     raw_metadata = metadata_summary.get('raw_metadata', {})
                     original_score = raw_metadata.get('data_quality_score', 0)
+        # Try dataset_overview.table_summaries — this is where Pipeline stores per-table scores
+        if original_score == 0:
+            table_summaries = metadata_summary.get('dataset_overview', {}).get('table_summaries', {})
+            if table_summaries:
+                scores = [t.get('quality_score', 0) for t in table_summaries.values()
+                          if isinstance(t, dict) and t.get('quality_score', 0) > 0]
+                if scores:
+                    original_score = round(sum(scores) / len(scores), 1)
+        # Try tables[*].table_metadata.data_quality_score — raw extractor output
+        if original_score == 0:
+            tables = metadata_summary.get('tables', {})
+            if tables:
+                scores = []
+                for tdata in tables.values():
+                    if isinstance(tdata, dict):
+                        inner = tdata.get('table_metadata', tdata)
+                        s = inner.get('data_quality_score', 0)
+                        if s > 0:
+                            scores.append(s)
+                if scores:
+                    original_score = round(sum(scores) / len(scores), 1)
 
         # Get total records - Enhanced: Handle multiple possible locations
         total_records = metadata_summary.get('dataset_overview', {}).get('total_records', 0)
@@ -2394,10 +2415,13 @@ class LLMEnricher:
             },
             "overall_assessment": {
                 "quality_grade": corrected_metrics.get('quality_grade', 'C'),
-                "corrected_score": corrected_metrics.get('corrected_score', 50),
+                "overall_score": corrected_metrics.get('corrected_score', 0),
+                "corrected_score": corrected_metrics.get('corrected_score', 0),
                 "confidence_score": 75,
                 "production_readiness": production_readiness,
-                "summary": "Fallback analysis - LLM processing unavailable. Basic validation passed."
+                "summary": "Fallback analysis - LLM processing unavailable. Basic validation passed.",
+                "key_strengths": [],
+                "primary_concerns": [],
             },
             "table_analysis": table_analysis,
             "risk_assessment": {
@@ -2406,6 +2430,7 @@ class LLMEnricher:
             "enrichment_metadata": {
                 "timestamp": datetime.now().isoformat(),
                 "mode": "fallback_safe",
+                "model_used": self.model,
                 "note": "Safe fallback with type validation"
             }
         }

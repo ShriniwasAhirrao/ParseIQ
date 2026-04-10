@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parseiq"
-version = "0.0.5"
+version = "0.0.6"
 description = "AI-powered data quality and metadata analysis agent"
 readme = "README.md"
 license = { file = "LICENSE" }

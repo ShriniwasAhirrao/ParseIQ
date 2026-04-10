@@ -1,7 +1,17 @@
 # ParseIQ — TODO & Backlog
 
-> Last updated: 2026-04-09
+> Last updated: 2026-04-10
 > Status legend:  ✅ Done  |  ⏳ Next  |  💡 Future
+
+---
+
+## ✅ Completed — v0.0.6 (2026-04-10)
+
+- ✅ **Overall Score N/A in Excel** — `_generate_outputs()` now reads `overall_score` then falls back to `corrected_score`; never shows N/A when a real score exists
+- ✅ **Model Used N/A in Excel** — `_create_fallback_enrichment()` now includes `model_used` in `enrichment_metadata`
+- ✅ **corrected_score always 0** — `_calculate_corrected_quality_score()` extended with two additional lookup paths matching the real pipeline metadata structure (`dataset_overview.table_summaries[*].quality_score` and `tables[*].table_metadata.data_quality_score`)
+- ✅ **Fallback missing fields** — `overall_score`, `key_strengths`, `primary_concerns` now always present in fallback `overall_assessment`
+- ✅ 6 regression tests added — 165/165 tests passing
 
 ---
 
