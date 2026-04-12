@@ -4,7 +4,11 @@
 
 | Version | Supported |
 |---|---|
-| 0.0.2 | Yes — current release |
+| 0.0.6 | Yes — current release |
+| 0.0.5 | Security patches only |
+| 0.0.4 | No |
+| 0.0.3 | No |
+| 0.0.2 | No |
 | 0.0.1 | No |
 
 ## Reporting a Vulnerability

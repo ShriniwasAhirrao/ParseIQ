@@ -96,13 +96,19 @@
 
 ---
 
-## ⏳ Next — v0.1.0
+## ⏳ Next — v0.0.7
+
+- [ ] **Bug: CSV delimiter detection fails on Unicode-heavy CSVs** — `csv.Sniffer().sniff()` raises `Could not determine delimiter` when the sample contains mostly Unicode characters. Affects `_load_csv()` in `parseiq/file_loader/loader.py`. Fix: fall back to `','` when sniffer fails. (2 tests failing: `test_02_unicode_heavy`, `test_rules_sidecar_yaml_applied`)
+- [ ] **XML + Excel test coverage** — `_load_xml()` and `_load_excel()` have no dedicated tests
+- [ ] **`conftest.py`** — shared test fixtures to reduce repetition across test files
+
+---
+
+## ⏳ Future — v0.1.0
 
 - [ ] **PDF report export** — export full quality report as PDF alongside Excel
 - [ ] **Batch processing** — `parseiq analyze-all data/` (folder of files in one command)
 - [ ] **Cross-table FK violation detection** — flag `_ref_*` values that don't exist in parent table (orphaned records)
-- [ ] **`conftest.py`** — shared test fixtures to reduce repetition across test files
-- [ ] **XML + Excel test coverage** — `_load_xml()` and `_load_excel()` have no dedicated tests
 
 ---
 

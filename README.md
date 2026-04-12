@@ -535,7 +535,7 @@ parseiq/
 │       ├── llm_agent.py              # Multi-provider LLM client (BYOK)
 │       └── prompt_template.txt       # LLM system prompt
 │
-├── tests/                            # 159 pytest tests
+├── tests/                            # 590+ pytest tests
 ├── input/                            # Sample input files
 ├── examples/                         # Runnable example scripts
 ├── pyproject.toml
@@ -554,7 +554,7 @@ pytest
 pytest --cov=parseiq --cov-report=term-missing
 ```
 
-Current status: **159/159 passing** (v0.0.4)
+Current status: **590/592 passing** (v0.0.6)
 
 ---
 
@@ -566,6 +566,17 @@ Current status: **159/159 passing** (v0.0.4)
 | CSV | `.csv` | Auto-detects delimiter (comma, semicolon, tab) and file encoding |
 | XML | `.xml` | Converted via `xmltodict`, then processed as JSON |
 | Excel | `.xlsx` `.xls` | Each sheet becomes a separate table |
+
+---
+
+## What's New in v0.0.6
+
+### LLM Mode Output Fixes
+
+- **Overall Score** and **Model Used** no longer show `N/A` in the Excel `01_LLM_Assessment` sheet
+- **Quality score** now correctly reflects actual per-table scores (was always 0 due to wrong metadata lookup)
+- Fallback enrichment now populates all expected fields — no blank cells in Excel output
+- 6 regression tests added; **590/592 tests passing**
 
 ---
 
@@ -677,11 +688,11 @@ Violations are injected into each affected table's `top_issues` and `anomaly_sum
 | **Alert rules** | Post-analysis rule evaluation with Slack/email callback helpers |
 | **Structured result object** | `PipelineResult` dataclass with quality scores, anomalies, grades |
 | **CLI + Python API** | Command-line tool or importable library |
-| **159 tests** | Full pytest suite across all components |
+| **592 tests** | Full pytest suite across all components |
 
 ---
 
-## Limitations (v0.0.4)
+## Limitations (v0.0.6)
 
 - Free-tier OpenRouter: ~10 RPM — one LLM call per run, not per table
 - LLM response time: 2–3 min for large datasets on free tier

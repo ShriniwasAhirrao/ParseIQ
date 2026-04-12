@@ -18,7 +18,7 @@ Open an issue with the `enhancement` label describing your use case.
 1. Fork the repo
 2. Create a branch: `git checkout -b fix/your-fix` or `feat/your-feature`
 3. Make your changes
-4. Run the test suite — all 159 tests must pass:
+4. Run the test suite — all 165 tests must pass:
    ```bash
    pip install -e ".[dev]"
    pytest
@@ -43,49 +43,37 @@ pytest
 
 ## Good First Issues — Ready for PRs
 
-The issues below are open and need community help. Bugs A–D from the original list were
-fixed in v0.0.3 — see `CHANGELOG.md` and `TODO.md` for details.
+All original Issues A–K and the LLM output bugs have been fixed (see `CHANGELOG.md`).
+New issues welcome — open one at https://github.com/ShriniwasAhirrao/ParseIQ/issues.
+
+### Potential areas for contribution
+
+- **PDF report export** — generate a PDF version of the Excel quality report
+- **Batch processing** — `parseiq analyze-all data/` for a folder of files
+- **Cross-table FK violation detection** — flag orphaned `_ref_*` values
+- **XML + Excel test coverage** — `_load_xml()` and `_load_excel()` have no dedicated tests
+- **`conftest.py`** — shared test fixtures to reduce repetition across test files
 
 ---
 
-### Issue E — pip Environment Collision  *(open)*
-**File:** `pyproject.toml`, `README.md`
-**What happens:** `pip install parseiq` into an existing project venv can downgrade or
-conflict with pinned dependencies (pandas, openpyxl, etc.).
-**Fix options:**
-1. Relax version pins in `pyproject.toml` to wide ranges (`pandas>=1.5`, `openpyxl>=3.0`)
-2. Add isolated-install guidance (pipx / dedicated venv) to the README Install section
-3. Add a `pip check` call in CI that installs alongside common data science packages
-**Label:** `enhancement` `documentation`
+## Previously Fixed Bugs — Closed
 
----
+| Bug / Issue | Status | Fixed in |
+|-------------|--------|----------|
+| A — Duplicate table analysis loop | ✅ Fixed | v0.0.3 |
+| B — Attribute context bleeding | ✅ Fixed | v0.0.3 |
+| C — Nested objects kept as blobs | ✅ Fixed | v0.0.3 |
+| D — Excel blob columns | ✅ Fixed | v0.0.3 |
+| E — pip environment collision | ✅ Fixed | v0.0.4 |
+| F — NEGATIVE_VALUES false positives | ✅ Fixed | v0.0.4 |
+| G — Cross-level range violations | ✅ Fixed | v0.0.4 |
+| H — Cross-table constraint validation | ✅ Fixed | v0.0.4 |
+| I — Scale/domain violations | ✅ Fixed | v0.0.4 |
+| J — Missing sibling dict key | ✅ Verified | v0.0.4 |
+| K — Schema polymorphism false positives | ✅ Fixed | v0.0.5 |
+| LLM mode N/A outputs + score=0 | ✅ Fixed | v0.0.6 |
 
-### Issue F — NEGATIVE_VALUES_DETECTED False Positives in Financial Data  *(open)*
-**File:** `parseiq/step1_metadata_extractor/extractor.py`
-**What happens:** Columns like `var_1d_99_pct`, `max_drawdown_pct`, `equity_shock`,
-`cfi_cr` are legitimately negative in finance (VaR, drawdown, cash outflows) but are
-flagged as `NEGATIVE_VALUES_DETECTED` anomalies, inflating issue counts and reducing
-quality scores.
-**Fix options:**
-1. Add a `--allow-negatives "pattern1,pattern2"` CLI flag
-2. Add a built-in heuristic — suppress the flag when the column name contains keywords
-   like `var`, `drawdown`, `shock`, `cfi`, `cff`, `pnl` (common financial negative-OK terms)
-3. Expose a `negative_ok_columns` parameter on `Pipeline.run()`
-**Tests to update:** `tests/test_comprehensive.py` — `TestAnomalyDetection`
-**Label:** `enhancement` `good first issue`
-
----
-
-## Previously Fixed Bugs (v0.0.3) — Closed
-
-| Bug | Status | Fixed in |
-|-----|--------|----------|
-| A — Duplicate table analysis loop | ✅ Fixed | `parseiq/pipeline.py` |
-| B — Attribute context bleeding between tables | ✅ Fixed | `parseiq/file_loader/loader.py` |
-| C — Nested objects kept as blobs | ✅ Fixed | `parseiq/file_loader/loader.py` |
-| D — Excel blob columns (unreadable wide cells) | ✅ Fixed | `parseiq/pipeline.py` |
-
-See `CHANGELOG.md` → `[0.0.3]` for full details.
+See `CHANGELOG.md` for full details per version.
 
 ---
 
