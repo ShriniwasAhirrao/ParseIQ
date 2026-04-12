@@ -1440,7 +1440,7 @@ class TestPipelineEndToEnd(unittest.TestCase):
             import yaml
         except ImportError:
             self.skipTest("pyyaml not installed")
-        rows = [{"grade": i * 10} for i in range(1, 12)]  # grade up to 110
+        rows = [{"name": f"student_{i}", "grade": i * 10} for i in range(1, 12)]  # grade up to 110
         data_path = os.path.join(self.tmp, "students.csv")
         _make_csv(rows, data_path)
         rules_path = os.path.join(self.tmp, "students_rules.yaml")
