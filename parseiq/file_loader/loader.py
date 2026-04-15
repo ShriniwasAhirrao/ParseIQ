@@ -72,10 +72,14 @@ class FileLoader:
     def _load_json(self, file_path: Path) -> Union[List[Dict], Dict]:
         """Load JSON file"""
         encoding = self._detect_encoding(file_path)
-        
+
         try:
-            with open(file_path, 'r', encoding=encoding) as f:
-                data = json.load(f)
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    data = json.load(f)
+            except (UnicodeDecodeError, UnicodeError):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
             
             # Return dict as is, or list as is
             if isinstance(data, dict):
@@ -286,11 +290,15 @@ class FileLoader:
         encoding = self._detect_encoding(file_path)
         
         try:
-            # Try to detect delimiter
+            # Try to detect delimiter — fall back to comma when sniffing fails
+            # (e.g. single-column CSVs have no delimiter character to detect)
             with open(file_path, 'r', encoding=encoding) as f:
                 sample = f.read(1024)
                 sniffer = csv.Sniffer()
-                delimiter = sniffer.sniff(sample).delimiter
+                try:
+                    delimiter = sniffer.sniff(sample).delimiter
+                except csv.Error:
+                    delimiter = ','
             
             # Read CSV
             df = pd.read_csv(file_path, encoding=encoding, delimiter=delimiter)
