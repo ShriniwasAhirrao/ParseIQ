@@ -1,0 +1,134 @@
+@import url("https://api.fontshare.com/v2/css?f[]=satoshi@700,900&display=swap");
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap");
+@import "tailwindcss";
+
+/* ── ParseIQ Design Tokens ──────────────────────────── */
+
+@theme {
+  --font-display: "Satoshi", "DM Sans", system-ui, sans-serif;
+  --font-body: "General Sans", "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-200: #bcdaff;
+  --color-brand-300: #8ec3ff;
+  --color-brand-400: #59a1ff;
+  --color-brand-500: #3378ff;
+  --color-brand-600: #1b57f5;
+  --color-brand-700: #1443e1;
+  --color-brand-800: #1736b6;
+  --color-brand-900: #19338f;
+
+  --color-surface-0: #ffffff;
+  --color-surface-50: #f8f9fb;
+  --color-surface-100: #f1f3f6;
+  --color-surface-200: #e5e7ed;
+  --color-surface-300: #d1d5de;
+  --color-surface-800: #1e2130;
+  --color-surface-900: #141625;
+  --color-surface-950: #0d0f1a;
+
+  --color-quality-excellent: #10b981;
+  --color-quality-good: #22c55e;
+  --color-quality-warning: #eab308;
+  --color-quality-poor: #f97316;
+  --color-quality-critical: #ef4444;
+
+  --color-severity-critical: #ef4444;
+  --color-severity-high: #f97316;
+  --color-severity-medium: #eab308;
+  --color-severity-low: #3b82f6;
+}
+
+/* ── Base Reset ─────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--color-surface-950);
+  color: var(--color-surface-200);
+  min-height: 100vh;
+}
+
+/* ── Fonts loaded via @import at top of file ──────────── */
+
+/* ── Utility: Noise Texture Overlay ─────────────────── */
+
+.noise-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+}
+
+/* ── Scrollbar ──────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-800);
+  border-radius: 3px;
+}
+
+/* ── Score Ring Animation ───────────────────────────── */
+
+@keyframes score-fill {
+  from { stroke-dashoffset: 283; }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+
+.animate-fade-up-delay-1 { animation-delay: 0.1s; }
+.animate-fade-up-delay-2 { animation-delay: 0.2s; }
+.animate-fade-up-delay-3 { animation-delay: 0.3s; }
+.animate-fade-up-delay-4 { animation-delay: 0.4s; }

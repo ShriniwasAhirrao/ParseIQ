@@ -5,6 +5,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## ParseIQ Web UI — 2026-04-17
+
+> The Web UI is a separate platform built on top of the ParseIQ library — not a library version bump.
+
+### Added
+
+- **Full-stack web application** (`web/`)
+  - React 19 + Vite 8 + TailwindCSS v4 frontend (SPA)
+  - FastAPI backend with background threading for pipeline jobs
+  - Drag-and-drop file upload (JSON, CSV, XML, Excel — up to 100 MB)
+  - Real-time processing page with timestamped thought-process event feed
+  - Interactive results dashboard: quality score gauges, anomaly badges, per-table cards
+  - Table detail view: column profiles, data preview, nested table drill-down
+  - Settings page: API key, model, provider configuration saved in browser
+  - Dark theme, fully responsive layout, keyboard-navigable
+
+- **Security hardening**
+  - XSS prevention in analytics component (regex-validated IDs, no `innerHTML` interpolation)
+  - Path traversal protection on file download endpoints
+  - API key redaction in event streams
+  - Configurable CORS, chunked upload, global exception handlers, production static serving
+
+- **Accessibility (WCAG)**
+  - ARIA roles (`tablist`, `tab`, `progressbar`, `switch`, `img`) across all interactive components
+  - Screen-reader-only labels, `:focus-visible` styles, keyboard navigation
+
+- **Backend hardening**
+  - Thread-safe job store, stdout capture, and concurrency semaphore (max 4 jobs)
+  - Path leak prevention, filename sanitisation, dev/production mode toggle
+
+- **Research materials** (`research/`)
+  - `technical_overview.md` — comprehensive technical documentation for research paper
+  - `architecture.md` — system architecture diagrams and workflow (Mermaid + ASCII)
+  - `performance_analysis.ipynb` — Jupyter notebook with benchmarks and comparison framework
+
+---
+
 ## [0.0.6] — 2026-04-10
 
 ### Fixed
@@ -299,5 +336,5 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - PDF report export
 - Batch processing (folder of files in one command)
 - Cross-table FK violation detection (orphaned records)
-- Custom YAML rule definitions
 - Parquet + Google Sheets input support
+- Web UI deployment (hosted version)

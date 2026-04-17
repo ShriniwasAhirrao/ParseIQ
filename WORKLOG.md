@@ -4,6 +4,109 @@ Development sessions, decisions, and technical notes in reverse-chronological or
 
 ---
 
+## Session: 2026-04-17 — Web UI Platform + Security Audit + Research Materials
+
+### Overview
+Built a full-stack web UI for ParseIQ, performed a comprehensive security and UX audit
+(~150 issues identified across frontend, backend, and CLI integration), fixed all critical
+and high-priority issues, and created research paper materials.
+
+### Web UI Architecture
+
+**Frontend:** React 19 + Vite 8 + TailwindCSS v4 single-page application
+- Pages: Upload, Processing (real-time), Dashboard (results), TableDetail (drill-down), Settings
+- Components: FileDropzone, ScoreGauge (SVG), ProgressSteps, AnomalyBadge, DataPreviewTable, TableCard, Navbar, Analytics
+- Hooks: `useJobPoller` — polls backend for job status and events
+- Dark theme with `noise-bg` texture, brand colour system, responsive grid layout
+
+**Backend:** FastAPI with background threading
+- Routes: `/api/upload` (chunked multipart), `/api/job/{id}` (status + events), `/api/results/{id}`, `/api/results/{id}/table/{name}`, `/api/settings`
+- Services: `PipelineRunner` — manages jobs via dict store, runs ParseIQ pipeline in background threads, captures stdout as events
+- Models: `Job`, `JobEvent`, `JobStatus` Pydantic models
+
+**Launcher:** `web/run.py` — starts both FastAPI (uvicorn) and Vite dev server; `--dev` flag controls hot-reload, host binding, and CORS behaviour
+
+### Security Audit & Fixes
+
+**Critical (fixed):**
+- XSS in `Analytics.tsx`: environment variables interpolated directly into `innerHTML` via template literals. Fixed with regex validation (`/^[a-zA-Z0-9]+$/` for Clarity, `/^G-[A-Z0-9]+$/` for GA) and safe alternatives (`encodeURIComponent`, `JSON.stringify`, `src` attribute)
+- Path traversal on download endpoint: user-supplied filename joined to `output_dir` without validation. Fixed with `os.path.realpath` + `startswith` check
+- API key leak in event stream: raw stdout captured and sent to browser could contain API keys. Fixed with `_redact_key()` regex replacement
+
+**High (fixed):**
+- No CORS restriction (was `allow_origins=["*"]`). Fixed with configurable `PARSEIQ_CORS_ORIGINS` env var, restricted methods/headers
+- Full file read before size check. Fixed with 1MB chunked streaming + early abort
+- Thread safety: `sys.stdout` replacement was process-global. Fixed with `_stdout_lock`, `_jobs_lock`, `_job_semaphore(4)`
+- API error shape mismatch: backend returned `{detail}`, frontend expected `{success, data, error}`. Fixed with global exception handlers
+
+**Medium (fixed):**
+- Font loading: `@font-face` blocks used Fontshare CSS endpoint as font `src`. Fixed with `@import` statements
+- Error swallowing in `useJobPoller`: catch block was empty. Fixed to set error state with "Connection lost" message
+- Axios error extraction: raw `err.message` shown instead of backend detail. Fixed with defensive `response?.data?.detail` extraction
+- Missing error states on Dashboard and TableDetail pages. Added `.catch()` + error UI
+- No `encodeURIComponent` on table names in URLs. Fixed
+
+### Accessibility Improvements
+
+| Component | ARIA additions |
+|---|---|
+| `FileDropzone` | `role="button"`, `tabIndex={0}`, `aria-label` on outer div and file input |
+| `ProgressSteps` | `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax` |
+| `ScoreGauge` | `role="img"`, `aria-label`, `<title>` on SVG |
+| `AnomalyBadge` | `.sr-only` severity text |
+| `DataPreviewTable` | `<caption>` with `.sr-only` |
+| `TableDetailPage` | `role="tablist"`, `role="tab"`, `aria-selected` |
+| `UploadPage` | `role="switch"`, `aria-checked`, `aria-label` on LLM toggle |
+| `SettingsPage` | `aria-label` on toggle |
+| `Navbar` | `rel="noreferrer"` on external links |
+| `index.css` | `:focus-visible` styles, `.sr-only` utility class |
+
+### Frontend Polish
+
+- `ErrorBoundary` class component wrapping entire app with recovery button
+- Loading skeleton placeholders on Dashboard and TableDetail pages
+- 404 catch-all route with "Back to home" link
+- `React.memo` on `EventRow` component (rendered per event, avoids re-render cascade)
+- Page titles set via `document.title` on every page
+- Connection-lost error handling in job poller
+- Zero-anomaly green success banner on dashboard
+- Set-based O(n) deduplication in anomaly aggregation
+- `meta` description, `theme-color`, OG tags in `index.html`
+- Responsive mobile layout (hamburger menu hidden on small screens)
+
+### Backend Hardening
+
+- Thread safety: `_jobs_lock` for job dict, `_stdout_lock` for stdout swap, `_job_semaphore(4)` for concurrency
+- Stale job cleanup: background sweep with lock
+- `os.path.basename()` on output file paths — prevents server filesystem path leak
+- Filename sanitisation: `re.sub(r'[^\w\s\-.]', '_', filename)` on downloads
+- `{table_name:path}` route parameter for URL-encoded table names with special characters
+- `--dev` vs production mode: different host binding, reload settings, CORS behaviour
+- `shell=True` fix for subprocess call on Windows
+
+### Research Materials Created (`research/`)
+
+- `technical_overview.md` — Pipeline architecture, anomaly detection algorithms, quality scoring methodology, LLM integration, BYOK architecture, incremental processing, data privacy model
+- `architecture.md` — System architecture diagrams (Mermaid), data flow, component interaction, deployment topology, web UI architecture
+- `performance_analysis.ipynb` — Jupyter notebook framework for benchmarking ParseIQ against ydata-profiling, great-expectations, pandas-profiling; metrics: execution time, anomaly detection F1, quality score correlation, memory usage
+
+### Note
+The Web UI is a separate platform built on top of the ParseIQ library — no library version bump.
+
+### Files Changed
+
+| Category | Files |
+|---|---|
+| **New — Web Frontend** | `web/frontend/` — full React SPA (15+ components, 5 pages, hooks, API client, types) |
+| **New — Web Backend** | `web/api/main.py`, `web/api/routes/` (upload, results, settings), `web/api/services/pipeline_runner.py` |
+| **New — Research** | `research/technical_overview.md`, `research/architecture.md`, `research/performance_analysis.ipynb` |
+| **Modified — Backend** | `web/api/main.py` (CORS, exception handlers, static serving), `web/api/routes/upload.py` (chunked upload), `web/api/routes/results.py` (path traversal, filename sanitisation), `web/api/services/pipeline_runner.py` (thread safety, key redaction, concurrency) |
+| **Modified — Frontend** | `web/frontend/src/index.css` (fonts, focus, sr-only), `web/frontend/index.html` (meta, OG), `web/frontend/src/App.tsx` (ErrorBoundary, 404), all pages (error states, ARIA, page titles), all components (ARIA, a11y) |
+| **Modified — Core** | `pyproject.toml` (version bump), `parseiq/__init__.py` (version bump) |
+| **Modified — Docs** | `README.md`, `CHANGELOG.md`, `WORKLOG.md`, `TODO.md` |
+
+---
+
 ## Session: 2026-04-10 — LLM Mode Output Fixes (v0.0.6)
 
 ### Overview

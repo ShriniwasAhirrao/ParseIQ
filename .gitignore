@@ -40,3 +40,16 @@ output/wheel_test/
 
 # Test virtual envs
 .test_venv/
+
+# Claude Code
+.claude/
+
+# Node.js
+node_modules/
+
+# Web UI build
+web/frontend/dist/
+
+# Runtime logs and output (already covered above but explicit)
+logs/
+output/

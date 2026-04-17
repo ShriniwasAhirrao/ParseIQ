@@ -1,7 +1,22 @@
 # ParseIQ — TODO & Backlog
 
-> Last updated: 2026-04-10
+> Last updated: 2026-04-17
 > Status legend:  ✅ Done  |  ⏳ Next  |  💡 Future
+
+---
+
+## ✅ Completed — Web UI Platform (2026-04-17)
+
+- ✅ **Web UI** — full-stack web application: React 19 + Vite 8 + TailwindCSS v4 frontend, FastAPI backend
+- ✅ **Drag-and-drop upload** — JSON, CSV, XML, Excel (up to 100 MB)
+- ✅ **Real-time processing** — live thought-process event feed with timestamps
+- ✅ **Results dashboard** — quality score gauges, anomaly badges, per-table cards
+- ✅ **Table detail view** — column profiles, data preview, nested table drill-down
+- ✅ **Settings page** — API key, model, provider configuration saved in browser
+- ✅ **Security audit** — XSS prevention, path traversal protection, API key redaction, CORS, chunked upload
+- ✅ **Accessibility** — ARIA roles, keyboard navigation, screen-reader labels, focus-visible styles
+- ✅ **Thread safety** — job locks, stdout locks, concurrency semaphore (max 4 jobs)
+- ✅ **Research materials** — `research/` folder with technical overview, architecture diagrams, performance analysis notebook
 
 ---
 
@@ -114,7 +129,7 @@
 
 ## 💡 Future — v0.2.0+
 
-- [ ] **Web UI** — drag-and-drop file upload, quality report in browser
+- [ ] **Web UI deployment** — hosted version (currently run locally with `python web/run.py --dev`)
 - [ ] **Custom YAML rule definitions** — `salary > 0`, `email matches pattern`
 - [ ] **Parquet + Google Sheets** input support
 - [ ] **Multi-tenancy / job queue** — Celery + Redis for concurrent users
@@ -122,12 +137,12 @@
 
 ---
 
-## Known Limitations (v0.0.2)
+## Known Limitations (v0.0.6)
 
 - Free-tier OpenRouter: ~10 RPM — one LLM call per run, not per table
 - LLM response time: 2–3 min for large datasets on free tier
 - Max file size: 100 MB
-- Output is files only — no live dashboard
+- Web UI not yet deployed — run locally with `python web/run.py --dev`
 
 ---
 

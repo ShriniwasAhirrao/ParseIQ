@@ -535,6 +535,23 @@ parseiq/
 │       ├── llm_agent.py              # Multi-provider LLM client (BYOK)
 │       └── prompt_template.txt       # LLM system prompt
 │
+├── web/                              # Web UI (React + FastAPI)
+│   ├── run.py                        # Dev/prod launcher (--dev flag)
+│   ├── api/                          # FastAPI backend
+│   │   ├── main.py                   # App entry, CORS, exception handlers
+│   │   ├── routes/                   # upload, results, settings endpoints
+│   │   └── services/                 # Pipeline runner (thread-safe, job queue)
+│   └── frontend/                     # React 19 + Vite 8 + TailwindCSS v4
+│       ├── src/pages/                # Upload, Processing, Dashboard, TableDetail, Settings
+│       ├── src/components/           # Reusable UI (ScoreGauge, FileDropzone, etc.)
+│       ├── src/hooks/                # useJobPoller (SSE/polling)
+│       └── src/lib/                  # API client, types
+│
+├── research/                         # Research paper materials
+│   ├── technical_overview.md         # Technical details for research paper
+│   ├── architecture.md               # System architecture and workflow diagrams
+│   └── performance_analysis.ipynb    # Performance benchmarks and comparisons
+│
 ├── tests/                            # 590+ pytest tests
 ├── input/                            # Sample input files
 ├── examples/                         # Runnable example scripts
@@ -566,6 +583,26 @@ Current status: **590/592 passing** (v0.0.6)
 | CSV | `.csv` | Auto-detects delimiter (comma, semicolon, tab) and file encoding |
 | XML | `.xml` | Converted via `xmltodict`, then processed as JSON |
 | Excel | `.xlsx` `.xls` | Each sheet becomes a separate table |
+
+---
+
+## Web UI (Coming Soon)
+
+ParseIQ now includes a **full-featured web interface** for interactive data quality analysis — drag-and-drop file upload, real-time processing with a live thought-process feed, and a rich results dashboard with per-table drill-down.
+
+**Stack:** React 19 + Vite 8 + TailwindCSS v4 (frontend) · FastAPI + background threading (backend)
+
+**Features:**
+- Drag-and-drop file upload (JSON, CSV, XML, Excel — up to 100 MB)
+- Toggle LLM enrichment on/off with any configured provider
+- Real-time processing page with timestamped event feed
+- Interactive results dashboard: quality scores, anomaly badges, score gauges
+- Per-table detail view with column profiles, data preview, and nested table navigation
+- Configurable settings (API key, model, provider) saved in browser
+- Dark theme, fully responsive, accessible (ARIA roles, keyboard navigation)
+- Thread-safe backend with concurrent job support (up to 4 simultaneous analyses)
+
+> **Deployment is in progress.** The web UI source is included under `web/` and can be run locally with `python web/run.py --dev`. A hosted version will be available shortly.
 
 ---
 
@@ -687,6 +724,7 @@ Violations are injected into each affected table's `top_issues` and `anomaly_sum
 | **Long-format Quality sheet** | One metric row per attribute: category, value, status, description |
 | **Alert rules** | Post-analysis rule evaluation with Slack/email callback helpers |
 | **Structured result object** | `PipelineResult` dataclass with quality scores, anomalies, grades |
+| **Web UI** | Drag-and-drop upload, real-time processing, interactive dashboard (coming soon — run locally now) |
 | **CLI + Python API** | Command-line tool or importable library |
 | **592 tests** | Full pytest suite across all components |
 
@@ -697,7 +735,7 @@ Violations are injected into each affected table's `top_issues` and `anomaly_sum
 - Free-tier OpenRouter: ~10 RPM — one LLM call per run, not per table
 - LLM response time: 2–3 min for large datasets on free tier
 - Max file size: 100 MB
-- Output is files only — no live dashboard
+- Web UI not yet deployed — run locally with `python web/run.py --dev`
 - YAML rules sidecar requires `pip install parseiq[rules]` for `.yaml` files; `.json` rules work without it
 
 ---
@@ -709,9 +747,9 @@ Violations are injected into each affected table's `top_issues` and `anomaly_sum
 - Batch processing — `parseiq analyze-all data/` (folder of files in one command)
 - Cross-table FK orphan detection — flag `_ref_*` values that don't exist in the parent table
 - `conftest.py` — shared test fixtures
+- Web UI deployment (hosted version)
 
 **v0.2.0**
-- Web UI — drag-and-drop file upload, results in browser
 - Parquet and Google Sheets support
 - Multi-tenancy / job queue (Celery + Redis)
 
