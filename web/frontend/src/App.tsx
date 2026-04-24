@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { HashRouter, Routes, Route, Link } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Analytics from "./components/Analytics";
 import BuyMeCoffee from "./components/BuyMeCoffee";
@@ -36,7 +36,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <HashRouter>
         <Analytics />
         <div className="min-h-screen bg-surface-950">
           <Navbar />
@@ -60,7 +60,7 @@ export default function App() {
           </Routes>
           <BuyMeCoffee />
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </ErrorBoundary>
   );
 }
