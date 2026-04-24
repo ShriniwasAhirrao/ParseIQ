@@ -16,7 +16,8 @@
 <p align="center">Profile · Score · Fix any JSON / CSV / XML / Excel file in one command</p>
 
 <p align="center">
-  <a href="https://pypi.org/project/parseiq/"><b>PyPI</b></a> ·
+  <a href="https://shriniwasahirrao.github.io/ParseIQ/">🌐 <b>Web UI</b></a> ·
+  <a href="https://pypi.org/project/parseiq/0.0.6/">📦 <b>PyPI v0.0.6</b></a> ·
   <a href="#quickstart"><b>Quickstart</b></a> ·
   <a href="commands.md"><b>CLI Reference</b></a> ·
   <a href="CHANGELOG.md"><b>Changelog</b></a> ·
