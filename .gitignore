@@ -41,7 +41,6 @@ output/wheel_test/
 # Test virtual envs
 .test_venv/
 
-# Claude Code
 .claude/
 
 # Node.js
